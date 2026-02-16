@@ -96,9 +96,19 @@ jobs:
           }
           EOF
 
+      - name: Check if platform package version exists
+        id: check_platform_version
+        run: |
+          if npm view @capsule-run/cli-${{ matrix.platform }}@${{ steps.version.outputs.version }} version >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish platform package
+        if: steps.check_platform_version.outputs.exists != 'true'
         working-directory: dist
-        run: npm publish --access public || echo "Version may already exist, continuing..."
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -116,9 +126,26 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Get version
+        id: version
+        run: |
+          VERSION="${{ github.event.release.tag_name || github.event.inputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if CLI package version exists
+        id: check_cli_version
+        run: |
+          if npm view @capsule-run/cli@${{ steps.version.outputs.version }} version >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish
+        if: steps.check_cli_version.outputs.exists != 'true'
         working-directory: crates/capsule-cli/npm
-        run: npm publish --access public || echo "Version may already exist, continuing..."
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -167,17 +194,36 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Get version
+        id: version
+        run: |
+          VERSION="${{ github.event.release.tag_name || github.event.inputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if SDK package version exists
+        id: check_sdk_version
+        run: |
+          if npm view @capsule-run/sdk@${{ steps.version.outputs.version }} version >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install dependencies
+        if: steps.check_sdk_version.outputs.exists != 'true'
         working-directory: crates/capsule-sdk/javascript
         run: npm ci
 
       - name: Build
+        if: steps.check_sdk_version.outputs.exists != 'true'
         working-directory: crates/capsule-sdk/javascript
         run: npm run build
 
       - name: Publish
+        if: steps.check_sdk_version.outputs.exists != 'true'
         working-directory: crates/capsule-sdk/javascript
-        run: npm publish --access public || echo "Version may already exist, continuing..."
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
