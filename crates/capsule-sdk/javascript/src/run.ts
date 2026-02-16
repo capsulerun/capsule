@@ -29,6 +29,17 @@ export interface RunnerResult {
 }
 
 /**
+ * Get the appropriate capsule command for the current platform
+ * On Windows, npm binaries have a .cmd extension
+ */
+function getCapsuleCommand(capsulePath: string): string {
+  if (process.platform === 'win32' && !capsulePath.endsWith('.cmd')) {
+    return `${capsulePath}.cmd`;
+  }
+  return capsulePath;
+}
+
+/**
  * Run a Capsule task from a third-party application
  *
  * @param options - Runner options
@@ -36,6 +47,7 @@ export interface RunnerResult {
  */
 export function run(options: RunnerOptions): Promise<RunnerResult> {
   const { file, args = [], cwd, capsulePath = 'capsule' } = options;
+  const command = getCapsuleCommand(capsulePath);
 
   const resolvedFile = resolve(cwd || process.cwd(), file);
 
@@ -46,7 +58,7 @@ export function run(options: RunnerOptions): Promise<RunnerResult> {
   return new Promise((resolve, reject) => {
     const cmdArgs = ['run', resolvedFile, '--json', ...args];
 
-    execFile(capsulePath, cmdArgs, { cwd, encoding: 'utf-8' }, (error, stdout, stderr) => {
+    execFile(command, cmdArgs, { cwd, encoding: 'utf-8' }, (error, stdout, stderr) => {
       if (error && !stdout) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           reject(new Error(
