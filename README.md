@@ -210,7 +210,7 @@ export const main = task({
 });
 ```
 
-## Documentation (v0.6.0)
+## Documentation (v0.6.1)
 
 ### Task Configuration Options
 

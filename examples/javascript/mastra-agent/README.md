@@ -25,5 +25,3 @@ npm run dev
 
 Open http://localhost:4111 and try: *"Calculate fibonacci of 15"*
 
-> [!NOTE]
-> In v0.6.0, we'll release an SDK helper to simplify subprocess execution.
