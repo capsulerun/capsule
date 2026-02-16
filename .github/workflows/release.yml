@@ -98,8 +98,9 @@ jobs:
 
       - name: Check if platform package version exists
         id: check_platform_version
+        shell: bash
         run: |
-          if npm view @capsule-run/cli-${{ matrix.platform }}@${{ steps.version.outputs.version }} version >/dev/null 2>&1; then
+          if (npm view @capsule-run/cli-${{ matrix.platform }}@${{ steps.version.outputs.version }} version) >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -136,7 +137,7 @@ jobs:
       - name: Check if CLI package version exists
         id: check_cli_version
         run: |
-          if npm view @capsule-run/cli@${{ steps.version.outputs.version }} version >/dev/null 2>&1; then
+          if (npm view @capsule-run/cli@${{ steps.version.outputs.version }} version) >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -204,7 +205,7 @@ jobs:
       - name: Check if SDK package version exists
         id: check_sdk_version
         run: |
-          if npm view @capsule-run/sdk@${{ steps.version.outputs.version }} version >/dev/null 2>&1; then
+          if (npm view @capsule-run/sdk@${{ steps.version.outputs.version }} version) >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
