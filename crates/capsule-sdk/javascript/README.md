@@ -20,7 +20,7 @@ npm install -g @capsule-run/cli
 npm install @capsule-run/sdk
 ```
 
-## Quick Start
+## Getting started
 
 Create `hello.ts`:
 
@@ -43,6 +43,35 @@ capsule run hello.ts
 ```
 
 > Use `--verbose` to display real-time task execution details.
+
+## Integrate Into an Existing Project
+
+The `run()` function lets you execute tasks programmatically from your application code, no CLI needed.
+
+> You need `@capsule-run/cli` in your dependencies to use the `runner` functions in TypeScript.
+
+```typescript
+import { run } from '@capsule-run/sdk/runner';
+
+const result = await run({
+  file: './capsule.ts',
+  args: ['code to execute']
+});
+```
+
+Create `capsule.ts`:
+
+```typescript
+import { task } from "@capsule-run/sdk";
+
+export const main = task({
+  name: "main",
+  compute: "LOW",
+  ram: "64MB"
+}, (code: string): string => {
+  return eval(code);
+});
+```
 
 ## How It Works
 
@@ -113,6 +142,7 @@ Every task returns a structured JSON envelope containing both the result and exe
 | `timeout` | Maximum execution time | `string` or `number` | unlimited | `"30s"`, `"5m"` |
 | `maxRetries` | Retry attempts on failure | `number` | `0` | `3` |
 | `allowedFiles` | Folders accessible in the sandbox | `string[]` | `[]` | `["./data", "./output"]` |
+| `allowedHosts` | Domains accessible in the sandbox | `string[]` | `["*"]` | `["api.openai.com", "*.anthropic.com"]` |
 | `envVariables` | Environment variables accessible in the sandbox | `string[]` | `[]` | `["API_KEY"]` |
 
 ### Compute Levels
@@ -160,6 +190,24 @@ export const restrictedWriter = task({
 export const main = task({ name: "main", allowedFiles: ["./data"] }, async () => {
     await restrictedWriter();
     return await fs.readFile("./data/input.txt", "utf8");
+});
+```
+
+### Network Access
+
+Tasks can make HTTP requests to domains specified in `allowedHosts`. By default, all outbound requests are allowed (`[\"*\"]`). Restrict access by providing a whitelist of domains.
+
+> Wildcards are supported: `*.example.com` matches all subdomains of `example.com`.
+
+```typescript
+import { task } from "@capsule-run/sdk";
+
+export const main = task({
+    name: "main",
+    allowedHosts: ["api.openai.com", "*.anthropic.com"]
+}, async () => {
+    const response = await fetch("https://api.openai.com/v1/models");
+    return response.json();
 });
 ```
 

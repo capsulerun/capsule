@@ -19,7 +19,7 @@ Each task runs inside its own WebAssembly sandbox, providing:
 pip install capsule-run
 ```
 
-## Quick Start
+## Getting started
 
 Create `hello.py`:
 
@@ -38,6 +38,29 @@ capsule run hello.py
 ```
 
 > Use `--verbose` to display real-time task execution details.
+
+## Integrate Into an Existing Project
+
+The `run()` function lets you execute tasks programmatically from your application code, no CLI needed.
+
+```python
+from capsule import run
+
+result = await run(
+    file="./capsule.py",
+    args=["code to execute"]
+)
+```
+
+Create `capsule.py`:
+
+```python
+from capsule import task
+
+@task(name="main", compute="LOW", ram="64MB")
+def main(code: str) -> str:
+    return exec(code)
+```
 
 ## How It Works
 
@@ -95,6 +118,7 @@ Every task returns a structured JSON envelope containing both the result and exe
 | `timeout` | Maximum execution time | `str` | unlimited | `"30s"`, `"5m"` |
 | `max_retries` | Retry attempts on failure | `int` | `0` | `3` |
 | `allowed_files` | Folders accessible in the sandbox | `list` | `[]` | `["./data", "./output"]` |
+| `allowed_hosts` | Domains accessible in the sandbox | `list` | `["*"]` | `["api.openai.com", "*.anthropic.com"]` |
 | `env_variables` | Environment variables accessible in the sandbox | `list` | `[]` | `["API_KEY"]` |
 
 ### Compute Levels
@@ -151,6 +175,22 @@ def restricted_writer() -> None:
 @task(name="main")
 def main() -> str:
     restricted_writer()
+```
+
+### Network Access
+
+Tasks can make HTTP requests to domains specified in `allowed_hosts`. By default, all outbound requests are allowed (`["*"]`). Restrict access by providing a whitelist of domains.
+
+> Wildcards are supported: `*.example.com` matches all subdomains of `example.com`.
+
+```python
+from capsule import task
+from capsule.http import get
+
+@task(name="main", allowed_hosts=["api.openai.com", "*.anthropic.com"])
+def main() -> dict:
+    response = get("https://api.openai.com/v1/models")
+    return response.json()
 ```
 
 ### Environment Variables

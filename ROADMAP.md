@@ -112,14 +112,14 @@ On failure:
 
 ## v0.6.0: SDK Runner & Network Controls
 
-**Status:** ⏳ In Progress
+**Status:** ✅ Done
 
 **Goal:** Enable seamless third-party integration and basic network security.
 
 - [x] **SDK Runner:** Add `run()` function to both SDKs for async subprocess execution.
 ```typescript
 // JavaScript/TypeScript
-import { run } from '@capsule-run/sdk';
+import { run } from '@capsule-run/sdk/runner';
 
 const result = await run({
   file: './capsule.ts',
@@ -136,7 +136,7 @@ result = await run(
     args=["code to execute"]
 )
 ```
-- [ ] **Allowed Hosts:** Restrict outgoing HTTP requests to a whitelist of domains.
+- [x] **Allowed Hosts:** Restrict outgoing HTTP requests to a whitelist of domains.
 
 ```typescript
 // Allowed Hosts

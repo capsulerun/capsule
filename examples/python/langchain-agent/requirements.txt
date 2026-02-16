@@ -1,0 +1,4 @@
+capsule-run
+langchain-openai
+langgraph
+python-dotenv

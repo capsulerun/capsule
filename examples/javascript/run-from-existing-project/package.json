@@ -1,0 +1,10 @@
+{
+  "name": "run-sandbox-from-existing-project",
+  "type": "module",
+  "dependencies": {
+    "@capsule-run/sdk": "latest"
+  },
+  "devDependencies": {
+    "@capsule-run/cli": "latest"
+  }
+}

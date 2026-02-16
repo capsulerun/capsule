@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/mavdol/capsule/actions/workflows/ci.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/ci.yml)
 
-[Getting Started](#quick-start) • [Documentation](#documentation-v052) • [Contributing](#contributing)
+[Getting Started](#getting-started) • [Documentation](#documentation-v052) • [Contributing](#contributing)
 
 </div>
 
@@ -103,7 +103,7 @@ Every task returns a structured JSON envelope containing both the result and exe
   - `retries` — Number of retry attempts that occurred
   - `fuel_consumed` — CPU resources used (see [Compute Levels](#compute-levels))
 
-## Quick Start
+## Getting Started
 
 ### Python
 
@@ -157,7 +157,60 @@ capsule run hello.ts
 > [!TIP]
 > Use `--verbose` to display real-time task execution details.
 
-## Documentation (v0.5.2)
+## Integrate Into an Existing Project
+
+The `run()` function lets you execute tasks programmatically from your application code, no CLI needed.
+
+### Python
+
+```python
+from capsule import run
+
+result = await run(
+    file="./capsule.py",
+    args=["code to execute"]
+)
+```
+
+Create `capsule.py`:
+
+```python
+from capsule import task
+
+@task(name="main", compute="LOW", ram="64MB")
+def main(code: str) -> str:
+    return exec(code)
+```
+
+### TypeScript / JavaScript
+
+> [!IMPORTANT]
+> You need `@capsule-run/cli` in your dependencies to use the `runner` functions in TypeScript.
+
+```typescript
+import { run } from '@capsule-run/sdk/runner';
+
+const result = await run({
+  file: './capsule.ts',
+  args: ['code to execute']
+});
+```
+
+Create `capsule.ts`:
+
+```typescript
+import { task } from "@capsule-run/sdk";
+
+export const main = task({
+  name: "main",
+  compute: "LOW",
+  ram: "64MB"
+}, (code: string): string => {
+  return eval(code);
+});
+```
+
+## Documentation (v0.6.0)
 
 ### Task Configuration Options
 
@@ -171,6 +224,7 @@ Configure your tasks with these parameters:
 | `timeout` | Maximum execution time | `str` | unlimited | `"30s"`, `"5m"`, `"1h"` |
 | `max_retries` / `maxRetries` | Number of retry attempts on failure | `int` | `0` | `3` |
 | `allowed_files` / `allowedFiles` | Folders accessible in the sandbox | `list` | `[]` | `["./data", "./output"]` |
+| `allowed_hosts` / `allowedHosts` | Domains accessible in the sandbox | `list` | `["*"]` | `["api.openai.com", "*.anthropic.com"]` |
 | `env_variables` / `envVariables` | Environment variables accessible in the sandbox | `list` | `[]` | `["API_KEY"]` |
 
 ### Compute Levels
@@ -295,6 +349,36 @@ export const restrictedWriter = task({
 export const main = task({ name: "main", allowedFiles: ["./data"] }, async () => {
     await restrictedWriter();
     return await fs.readFile("./data/input.txt", "utf8");
+});
+```
+
+### Network Access
+
+Tasks can make HTTP requests to domains specified in `allowed_hosts`. By default, all outbound requests are allowed (`["*"]`). Restrict access by providing a whitelist of domains.
+
+#### Python
+
+```python
+from capsule import task
+from capsule.http import get
+
+@task(name="main", allowed_hosts=["api.openai.com", "*.anthropic.com"])
+def main() -> dict:
+    response = get("https://api.openai.com/v1/models")
+    return response.json()
+```
+
+#### TypeScript / JavaScript
+
+```typescript
+import { task } from "@capsule-run/sdk";
+
+export const main = task({
+    name: "main",
+    allowedHosts: ["api.openai.com", "*.anthropic.com"]
+}, async () => {
+    const response = await fetch("https://api.openai.com/v1/models");
+    return response.json();
 });
 ```
 

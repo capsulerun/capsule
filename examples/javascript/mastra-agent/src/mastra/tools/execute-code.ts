@@ -1,24 +1,6 @@
 import { createTool } from '@mastra/core/tools';
-import { execSync } from 'child_process';
 import { z } from 'zod';
-import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PROJECT_ROOT = resolve(__dirname, '../../..');
-
-interface Result {
-  success: boolean;
-  result: unknown;
-  error: { error_type: string; message: string } | null;
-  execution: {
-    task_name: string;
-    duration_ms: number;
-    retries: number;
-    fuel_consumed: number;
-  };
-}
+import { run } from '@capsule-run/sdk/runner';
 
 export const executeCode = createTool({
   id: 'execute-code',
@@ -34,20 +16,16 @@ export const executeCode = createTool({
   }),
   execute: async ({ code }: { code: string }) => {
     try {
-      const escapedCode = code.replace(/'/g, "'\\''");
-      const capsulePath = resolve(PROJECT_ROOT, 'capsule.ts');
-
-      const result = execSync(`capsule run "${capsulePath}" --json '${escapedCode}'`, {
-        encoding: 'utf-8'
-      }).toString();
-
-      const parsed: Result = JSON.parse(result);
+      const result = await run({
+        file: '../../capsule.ts',
+        args: [code],
+      });
 
       return {
-        success: parsed.success,
-        result: parsed.result,
-        error: parsed.error ? parsed.error.message : null,
-        duration_ms: parsed.execution.duration_ms,
+        success: result.success,
+        result: result.result,
+        error: result.error ? result.error.message : null,
+        duration_ms: result.execution.duration_ms,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
