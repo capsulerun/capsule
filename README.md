@@ -43,7 +43,7 @@ def analyze_data(dataset: list) -> dict:
 
 ### With TypeScript / JavaScript
 
-For TypeScript and JavaScript, use the `task()` wrapper function with full access to the npm ecosystem:
+Use the `task()` wrapper function with full access to the npm ecosystem:
 
 ```typescript
 import { task } from "@capsule-run/sdk";
