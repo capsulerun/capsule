@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/mavdol/capsule/actions/workflows/ci.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/ci.yml)
 
-[Getting Started](#getting-started) • [Documentation](#documentation-v052) • [Contributing](#contributing)
+[Getting Started](#getting-started) • [Documentation](#documentation-v061) • [Contributing](#contributing)
 
 </div>
 
