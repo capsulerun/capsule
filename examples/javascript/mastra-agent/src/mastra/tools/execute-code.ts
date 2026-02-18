@@ -15,26 +15,16 @@ export const executeCode = createTool({
     duration_ms: z.number(),
   }),
   execute: async ({ code }: { code: string }) => {
-    try {
-      const result = await run({
-        file: '../../capsule.ts',
-        args: [code],
-      });
+    const result = await run({
+      file: '../../capsule.ts',
+      args: [code],
+    });
 
-      return {
-        success: result.success,
-        result: result.result,
-        error: result.error ? result.error.message : null,
-        duration_ms: result.execution.duration_ms,
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        success: false,
-        result: null,
-        error: message,
-        duration_ms: 0,
-      };
-    }
+    return {
+      success: result.success,
+      result: result.result,
+      error: result.error ? result.error.message : null,
+      duration_ms: result.execution.duration_ms,
+    };
   },
 });
