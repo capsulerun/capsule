@@ -478,7 +478,7 @@ npm install && npm run build && npm link
 
 1. **Fork** the repository
 2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Run tests**: `cargo test`
+3. **Run tests**: `cargo test` (only needed if modifying `crates/capsule-cli` or `crates/capsule-core`)
 4. **Open** a Pull Request
 
 Need help? [Open an issue](https://github.com/mavdol/capsule/issues)
