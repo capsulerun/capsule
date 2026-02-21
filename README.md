@@ -139,6 +139,7 @@ capsule run hello.py
 > 
 > print(f"Task completed: {result['result']}")
 > ```
+> See [In-code usage documentation](#python-5) </small>
 
 ### TypeScript / JavaScript
 
@@ -179,6 +180,7 @@ capsule run hello.ts
 > 
 > console.log(`Task completed: ${result.result}`);
 > ```
+>  See [In-code usage documentation](#typescript--javascript-5) </small>
 
 > [!TIP]
 > Use `--verbose` to display real-time task execution details.
