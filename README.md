@@ -391,7 +391,7 @@ export const main = task({
 
 ### In-Code Usage
 
-The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` passed to `run()` are automatically forwarded as parameters to the `main` task.
+The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` are automatically forwarded as parameters to the `main` task.
 
 ### Python
 
