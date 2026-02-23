@@ -162,8 +162,7 @@ impl RuntimeCommand for CreateInstance {
         let component = match runtime.get_component().await {
             Some(c) => c,
             None => {
-                let c =
-                    load_or_compile_component(&runtime.engine, &self.wasm_path)?;
+                let c = load_or_compile_component(&runtime.engine, &self.wasm_path)?;
 
                 runtime.set_component(c.clone()).await;
                 c

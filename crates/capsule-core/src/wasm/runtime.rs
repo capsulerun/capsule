@@ -142,7 +142,10 @@ impl Runtime {
         *self.component.write().await = Some(component);
     }
 
-    pub fn precompile(&self, wasm_path: &std::path::Path) -> Result<std::path::PathBuf, WasmRuntimeError> {
+    pub fn precompile(
+        &self,
+        wasm_path: &std::path::Path,
+    ) -> Result<std::path::PathBuf, WasmRuntimeError> {
         precompile_component(&self.engine, wasm_path).map_err(WasmRuntimeError::WasmtimeError)
     }
 }
