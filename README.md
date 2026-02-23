@@ -105,6 +105,9 @@ Every task returns a structured JSON envelope containing both the result and exe
 
 ## Getting Started
 
+> [!TIP]
+> Add `--verbose` to any `capsule run` command to see real-time task execution details.
+
 ### Python
 
 ```bash
@@ -180,8 +183,8 @@ capsule run hello.ts
 > console.log(`Task completed: ${result.result}`);
 > ```
 
-> [!TIP]
-> Use `--verbose` to display real-time task execution details.
+> [!NOTE]
+> See [in-code usage documentation](#in-code-usage)
 
 ## Documentation (v0.6.1)
 
@@ -389,7 +392,7 @@ export const main = task({
 
 ### In-Code Usage
 
-The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` passed to `run()` are automatically forwarded as parameters to the `main` task.
+The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` are automatically forwarded as parameters to the `main` task.
 
 ### Python
 
@@ -478,7 +481,7 @@ npm install && npm run build && npm link
 
 1. **Fork** the repository
 2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Run tests**: `cargo test`
+3. **Run tests**: `cargo test` (only needed if modifying `crates/capsule-cli` or `crates/capsule-core`)
 4. **Open** a Pull Request
 
 Need help? [Open an issue](https://github.com/mavdol/capsule/issues)
