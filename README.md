@@ -443,6 +443,25 @@ export const main = task({
 });
 ```
 
+### Cache Management
+
+When you run your code, Capsule creates a `.capsule` folder in your project root. This is the build cache. It stores compiled artifacts so subsequent runs are fast (from seconds to few milliseconds).
+
+> [!TIP]
+> `.capsule/` should be added to `.gitignore`. The cache is specific to your own environment and will be regenerated automatically.
+
+```
+.capsule/
+├── wasm/
+│   ├── main_a1b2c3d4.wasm    # Compiled WebAssembly module
+│   └── main_a1b2c3d4.cwasm   # Native precompiled cache
+├── wit/                       # Interface definitions
+└── trace.db                   # Execution logs
+```
+
+
+
+
 ## Compatibility
 
 > [!NOTE]
