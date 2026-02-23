@@ -105,6 +105,9 @@ Every task returns a structured JSON envelope containing both the result and exe
 
 ## Getting Started
 
+> [!TIP]
+> Add `--verbose` to any `capsule run` command to see real-time task execution details.
+
 ### Python
 
 ```bash
@@ -139,7 +142,6 @@ capsule run hello.py
 > 
 > print(f"Task completed: {result['result']}")
 > ```
-> See [In-code usage documentation](#python-5) </small>
 
 ### TypeScript / JavaScript
 
@@ -180,10 +182,9 @@ capsule run hello.ts
 > 
 > console.log(`Task completed: ${result.result}`);
 > ```
->  See [In-code usage documentation](#typescript--javascript-5) </small>
 
-> [!TIP]
-> Use `--verbose` to display real-time task execution details.
+> [!NOTE]
+> See [in-code usage documentation](#in-code-usage)
 
 ## Documentation (v0.6.1)
 
