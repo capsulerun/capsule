@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "openai": "^6.16.0",
-    "@capsule-run/sdk": "^0.5.2"
+    "@capsule-run/sdk": "latest"
   },
   "devDependencies": {
     "@types/node": "^24.10.9"

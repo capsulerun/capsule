@@ -25,8 +25,5 @@ pub enum Commands {
     },
     Build {
         file: Option<String>,
-
-        #[arg(long)]
-        verbose: bool,
     },
 }

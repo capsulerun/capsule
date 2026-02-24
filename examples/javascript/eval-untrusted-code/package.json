@@ -1,5 +1,5 @@
 {
-  "name": "eval-security-test",
+  "name": "eval-untrusted-code",
   "version": "1.0.0",
   "description": "Comprehensive JavaScript eval() security testing in Capsule WASM sandbox",
   "main": "eval-test.ts",
@@ -11,6 +11,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@capsule-run/sdk": "^0.5.1"
+    "@capsule-run/sdk": "latest"
   }
 }

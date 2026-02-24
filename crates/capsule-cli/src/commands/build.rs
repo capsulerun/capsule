@@ -101,9 +101,9 @@ pub fn compile_to_wasm(file_path: &Path) -> Result<CompileResult, BuildError> {
     }
 }
 
-pub async fn execute(file_path: Option<&Path>, verbose: bool) -> Result<PathBuf, BuildError> {
+pub async fn execute(file_path: Option<&Path>) -> Result<PathBuf, BuildError> {
     let manifest = Manifest::new()?;
-    let mut reporter = TaskReporter::new(verbose);
+    let mut reporter = TaskReporter::new(true);
 
     let file_path: PathBuf = match file_path {
         Some(path) => path.to_path_buf(),
@@ -118,13 +118,13 @@ pub async fn execute(file_path: Option<&Path>, verbose: bool) -> Result<PathBuf,
 
     let runtime_config = RuntimeConfig {
         cache_dir: compile_result.cache_dir,
-        verbose,
+        verbose: true,
     };
     let runtime = Runtime::new(runtime_config, manifest.capsule_toml)?;
     let cwasm_path = runtime.precompile(&compile_result.wasm_path)?;
 
     reporter.finish_progress(Some("Precompilation complete"));
-    reporter.success(&format!("✓ Built: {}", cwasm_path.display()));
+    reporter.success(&format!("Build successful."));
 
     Ok(cwasm_path)
 }
