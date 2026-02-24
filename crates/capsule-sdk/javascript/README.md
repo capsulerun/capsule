@@ -122,7 +122,7 @@ Every task returns a structured JSON envelope containing both the result and exe
 
 **Response fields:**
 - `success` — Boolean indicating whether the task completed successfully
-- `result` — The actual return value from your task (json, string, null on failure etc..)
+- `result` — The actual return value from your task (json, string, null on failure etc.)
 - `error` — Error details if the task failed (`{ error_type: string, message: string }`)
 - `execution` — Performance metrics:
   - `task_name` — Name of the executed task
@@ -231,10 +231,12 @@ export const main = task({
 
 ✅ **Supported:**
 - npm packages and ES modules
-- Common Node.js built-ins. If you have any trouble with a built-in do not hesitate to open an issue.
+- Common Node.js built-ins. If you have any trouble with a built-in, do not hesitate to open an issue.
 
-⚠️ **Not supported:**
+⚠️ **Not supported (inside the sandbox):**
 - Native Node.js addons (C++ bindings)
+
+> These limitations only apply to the task file executed in the sandbox. Your host code using `run()` runs in a normal Node.js environment with no restrictions. (see [Integrate Into an Existing Project](#integrate-into-an-existing-project))
 
 ## Links
 

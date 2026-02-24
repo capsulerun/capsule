@@ -75,7 +75,7 @@ def analyze_data(dataset: list) -> dict:
     return {"processed": len(dataset), "status": "complete"}
 ```
 
-> The runtime requires a task named `"main"` as the entry point. Python can define the main task itself, but it's recommended to set it manually.
+> The runtime requires a task named `"main"` as the entry point. Python will create one automatically if none is defined, but it's recommended to set it explicitly.
 
 When you run `capsule run main.py`, your code is compiled into a WebAssembly module and executed in a dedicated sandbox.
 
@@ -98,7 +98,7 @@ Every task returns a structured JSON envelope containing both the result and exe
 
 **Response fields:**
 - `success` — Boolean indicating whether the task completed successfully
-- `result` — The actual return value from your task (json, string, null on failure etc..)
+- `result` — The actual return value from your task (json, string, null on failure etc.)
 - `error` — Error details if the task failed (`{ error_type: string, message: string }`)
 - `execution` — Performance metrics:
   - `task_name` — Name of the executed task
@@ -213,8 +213,10 @@ def main() -> dict:
 - Pure Python packages and standard library
 - `json`, `math`, `re`, `datetime`, `collections`, etc.
 
-⚠️ **Not yet supported:**
-- Packages with C extensions (e.g `numpy`, `pandas`)
+⚠️ **Not yet supported (inside the sandbox):**
+- Packages with C extensions (e.g. `numpy`, `pandas`)
+
+> These limitations only apply to the task file executed in the sandbox. Your host code using `run()` has access to the full Python ecosystem, any pip package, native extensions, everything. (see [Integrate Into an Existing Project](#integrate-into-an-existing-project))
 
 ## Links
 
