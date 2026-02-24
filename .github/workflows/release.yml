@@ -246,6 +246,29 @@ jobs:
       - name: Install Maturin
         run: pip install maturin
 
+      - name: Prepare capsule-core WIT files
+        shell: bash
+        run: |
+          cp -r crates/capsule-wit crates/capsule-core/
+          python -c "
+          import re
+
+          replacements = [
+            ('crates/capsule-core/src/wasm/compiler/mod.rs',
+              '../../../../capsule-wit', '../../../capsule-wit'),
+            ('crates/capsule-core/src/wasm/state.rs',
+              '\"../capsule-wit\"', '\"./capsule-wit\"'),
+            ('crates/capsule-core/src/wasm/utilities/wit_manager.rs',
+              '../../../../capsule-wit', '../../../capsule-wit'),
+          ]
+
+          for path, old, new in replacements:
+            with open(path, 'r') as f:
+              content = f.read()
+            with open(path, 'w') as f:
+              f.write(content.replace(old, new))
+          "
+
       - name: Copy SDK source for maturin
         shell: bash
         run: |
