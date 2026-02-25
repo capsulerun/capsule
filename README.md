@@ -448,7 +448,7 @@ export const main = task({
 When you run your code, Capsule creates a `.capsule` folder in your project root. This is the build cache. It stores compiled artifacts so subsequent runs are fast (from seconds to few milliseconds).
 
 > [!TIP]
-> `.capsule/` should be added to `.gitignore`. The cache is specific to your own environment and will be regenerated automatically.
+> `.capsule` should be added to `.gitignore`. The cache is specific to your own environment and will be regenerated automatically.
 
 ```
 .capsule/
