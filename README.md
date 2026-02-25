@@ -105,9 +105,6 @@ Every task returns a structured JSON envelope containing both the result and exe
 
 ## Getting Started
 
-> [!TIP]
-> Add `--verbose` to any `capsule run` command to see real-time task execution details.
-
 ### Python
 
 ```bash
@@ -185,6 +182,9 @@ capsule run hello.ts
 
 > [!NOTE]
 > See [in-code usage documentation](#in-code-usage)
+
+> [!TIP]
+> Add `--verbose` to any `capsule run` command to see real-time task execution details.
 
 ## Documentation (v0.6.2)
 
@@ -448,7 +448,7 @@ export const main = task({
 When you run your code, Capsule creates a `.capsule` folder in your project root. This is the build cache. It stores compiled artifacts so subsequent runs are fast (from seconds to few milliseconds).
 
 > [!TIP]
-> `.capsule/` should be added to `.gitignore`. The cache is specific to your own environment and will be regenerated automatically.
+> `.capsule` should be added to `.gitignore`. The cache is specific to your own environment and will be regenerated automatically.
 
 ```
 .capsule/
