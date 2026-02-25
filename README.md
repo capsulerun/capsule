@@ -105,9 +105,6 @@ Every task returns a structured JSON envelope containing both the result and exe
 
 ## Getting Started
 
-> [!TIP]
-> Add `--verbose` to any `capsule run` command to see real-time task execution details.
-
 ### Python
 
 ```bash
@@ -185,6 +182,9 @@ capsule run hello.ts
 
 > [!NOTE]
 > See [in-code usage documentation](#in-code-usage)
+
+> [!TIP]
+> Add `--verbose` to any `capsule run` command to see real-time task execution details.
 
 ## Documentation (v0.6.2)
 
