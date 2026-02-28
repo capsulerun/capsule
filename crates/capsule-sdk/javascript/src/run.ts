@@ -1,12 +1,12 @@
 /**
  * Capsule SDK - SDK Runner
  *
- * Provides the `run` function for running Capsule tasks
+ * Provides the `run` functions for running Capsule tasks
  * from third party applications.
  */
 
 import { execFile } from 'child_process';
-import { resolve } from 'path';
+import { resolve, extname } from 'path';
 import { existsSync } from 'fs';
 
 export interface RunnerOptions {
@@ -27,6 +27,8 @@ export interface RunnerResult {
     fuel_consumed: number;
   };
 }
+
+const WASM_EXTENSIONS = new Set(['.wasm']);
 
 /**
  * Get the appropriate capsule command for the current platform
@@ -49,13 +51,20 @@ export function run(options: RunnerOptions): Promise<RunnerResult> {
   const command = getCapsuleCommand(capsulePath);
 
   const resolvedFile = resolve(cwd || process.cwd(), file);
+  const ext = extname(resolvedFile).toLowerCase();
+  const isWasm = WASM_EXTENSIONS.has(ext);
 
   if (!existsSync(resolvedFile)) {
-    return Promise.reject(new Error(`File not found: ${resolvedFile}`));
+    const hint = isWasm
+      ? ` Run \`capsule build\` first to generate the .wasm artifact.`
+      : '';
+    return Promise.reject(new Error(`File not found: ${resolvedFile}.${hint}`));
   }
 
+  const subcommand = isWasm ? 'exec' : 'run';
+
   return new Promise((resolve, reject) => {
-    const cmdArgs = ['run', resolvedFile, '--json', ...args];
+    const cmdArgs = [subcommand, resolvedFile, '--json', ...args];
 
     let executable = command;
     let executionArgs = cmdArgs;

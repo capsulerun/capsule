@@ -1,7 +1,7 @@
 """
 Capsule SDK - SDK Runner
 
-Provides the `run` function for running Capsule tasks
+Provides the `run` functions for running Capsule tasks
 from third party applications.
 """
 
@@ -9,6 +9,9 @@ import asyncio
 import json
 import os
 from typing import Any, Optional, TypedDict
+
+_WASM_EXTENSIONS = {".wasm"}
+_SOURCE_EXTENSIONS = {".py", ".ts", ".js", ".mjs"}
 
 
 class RunnerOptions(TypedDict, total=False):
@@ -47,10 +50,10 @@ async def run(
     """Run a Capsule task from a third-party application.
 
     Args:
-        file: Path to the Capsule task file
-        args: Arguments to pass to the task
-        cwd: Working directory for the task
-        capsule_path: Path to capsule CLI binary
+        file: Path to the source file or pre-built .wasm artifact
+        args: Arguments to pass to the task's main function
+        cwd: Working directory (used to resolve relative paths)
+        capsule_path: Path to the capsule CLI binary
 
     Returns:
         RunnerResult with task result and execution metadata
@@ -58,11 +61,25 @@ async def run(
     args = args or []
 
     resolved_file = os.path.abspath(os.path.join(cwd or os.getcwd(), file))
+    ext = os.path.splitext(resolved_file)[1].lower()
+
+    if ext not in _WASM_EXTENSIONS and ext not in _SOURCE_EXTENSIONS:
+        raise ValueError(
+            f"Unsupported file type: '{ext}'. "
+            f"Expected a source file ({', '.join(sorted(_SOURCE_EXTENSIONS))}) "
+            f"or a pre-built artifact ({', '.join(sorted(_WASM_EXTENSIONS))})."
+        )
 
     if not os.path.exists(resolved_file):
+        if ext in _WASM_EXTENSIONS:
+            raise FileNotFoundError(
+                f"Artifact not found: {resolved_file}. "
+                "Run `capsule build` first to generate the .wasm artifact."
+            )
         raise FileNotFoundError(f"File not found: {resolved_file}")
 
-    cmd = [capsule_path, "run", resolved_file, "--json", *args]
+    subcommand = "exec" if ext in _WASM_EXTENSIONS else "run"
+    cmd = [capsule_path, subcommand, resolved_file, "--json", *args]
 
     try:
         process = await asyncio.create_subprocess_exec(
