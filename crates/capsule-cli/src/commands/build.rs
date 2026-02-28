@@ -126,7 +126,7 @@ pub async fn execute(file_path: Option<&Path>, export: bool) -> Result<PathBuf, 
     reporter.finish_progress(Some("Precompilation complete"));
 
     if export {
-        reporter.success("Export successful");
+        reporter.success("Export complete.");
     }
 
     reporter.success("Build successful.");

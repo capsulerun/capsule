@@ -127,19 +127,6 @@ Run it:
 capsule run hello.py
 ```
 
-> Or from your existing code:
->
-> ```python
-> from capsule import run
->
-> result = await run(
->    file="./hello.py",
->    args=[]
-> )
->
-> print(f"Task completed: {result['result']}")
-> ```
-
 ### TypeScript / JavaScript
 
 ```bash
@@ -167,26 +154,45 @@ Run it:
 capsule run hello.ts
 ```
 
-> Or from your existing code:
->
-> ```typescript
-> import { run } from '@capsule-run/sdk/runner';
->
-> const result = await run({
->  file: './hello.ts',
->  args: []
-> });
->
-> console.log(`Task completed: ${result.result}`);
-> ```
-
-> [!NOTE]
-> See [in-code usage documentation](#in-code-usage)
-
 > [!TIP]
 > Add `--verbose` to any `capsule run` command to see real-time task execution details.
 
-## Documentation (v0.6.2)
+## Production
+
+Running source code directly (like `.py` or `.ts`) evaluates and compiles your file at runtime. While great for development, this compilation step adds a few seconds of latency. For use cases where sub-second latency is critical, you should build your tasks ahead of time.
+
+**1. Export a compiled artifact:**
+```bash
+capsule build hello.py --export
+# Generates an optimized hello.wasm file
+```
+
+**2. Execute the compiled artifact directly:**
+
+```bash
+capsule exec hello.wasm
+```
+
+Or from your existing code:
+
+```python
+from capsule import run
+
+result = await run(
+   file="./hello.wasm",
+   args=[]
+)
+
+print(f"Task completed: {result['result']}")
+```
+
+> [!NOTE]
+> See [in-code usage documentation](#in-code-usage) for details on both Python and TypeScript integration.
+
+
+Executing a `.wasm` file bypasses the compiler completely, reducing initialization time to milliseconds while using a natively optimized (`.cwasm`) format behind the scenes.
+
+## Documentation (v0.6.3)
 
 ### Task Configuration Options
 
