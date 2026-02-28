@@ -161,7 +161,6 @@ capsule run hello.ts
 
 Running source code directly (like `.py` or `.ts`) evaluates and compiles your file at runtime. While great for development, this compilation step adds a few seconds of latency. For use cases where sub-second latency is critical, you should build your tasks ahead of time.
 
-**1. Export a compiled artifact:**
 ```bash
 # Generates an optimized hello.wasm file
 capsule build hello.py --export
