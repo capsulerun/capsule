@@ -159,7 +159,7 @@ capsule run hello.ts
 
 ## Production
 
-Running source code directly (like `.py` or `.ts`) evaluates and compiles your file at runtime. While great for development, this compilation step adds a few seconds of latency. For use cases where sub-second latency is critical, you should build your tasks ahead of time.
+Running source code directly (like `.py` or `.ts`) evaluates and compiles your file at runtime. While great for development, this compilation step adds a few seconds of latency on first call. For use cases where sub-second latency is critical, you should build your tasks ahead of time.
 
 ```bash
 # Generates an optimized hello.wasm file
