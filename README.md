@@ -285,6 +285,36 @@ export const main = task({
 });
 ```
 
+### Network Access
+
+Tasks can make HTTP requests to domains specified in `allowed_hosts`. By default, all outbound requests are allowed (`["*"]`). Restrict access by providing a whitelist of domains.
+
+#### Python
+
+```python
+from capsule import task
+from capsule.http import get
+
+@task(name="main", allowed_hosts=["api.openai.com", "*.anthropic.com"])
+def main() -> dict:
+    response = get("https://api.openai.com/v1/models")
+    return response.json()
+```
+
+#### TypeScript / JavaScript
+
+```typescript
+import { task } from "@capsule-run/sdk";
+
+export const main = task({
+    name: "main",
+    allowedHosts: ["api.openai.com", "*.anthropic.com"]
+}, async () => {
+    const response = await fetch("https://api.openai.com/v1/models");
+    return response.json();
+});
+```
+
 ### File Access
 
 Tasks can read and write files within directories specified in `allowed_files`. Any attempt to access files outside these directories is not possible.
@@ -327,36 +357,6 @@ export const restrictedWriter = task({
 export const main = task({ name: "main", allowedFiles: ["./data"] }, async () => {
     await restrictedWriter();
     return await fs.readFile("./data/input.txt", "utf8");
-});
-```
-
-### Network Access
-
-Tasks can make HTTP requests to domains specified in `allowed_hosts`. By default, all outbound requests are allowed (`["*"]`). Restrict access by providing a whitelist of domains.
-
-#### Python
-
-```python
-from capsule import task
-from capsule.http import get
-
-@task(name="main", allowed_hosts=["api.openai.com", "*.anthropic.com"])
-def main() -> dict:
-    response = get("https://api.openai.com/v1/models")
-    return response.json()
-```
-
-#### TypeScript / JavaScript
-
-```typescript
-import { task } from "@capsule-run/sdk";
-
-export const main = task({
-    name: "main",
-    allowedHosts: ["api.openai.com", "*.anthropic.com"]
-}, async () => {
-    const response = await fetch("https://api.openai.com/v1/models");
-    return response.json();
 });
 ```
 
