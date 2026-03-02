@@ -11,7 +11,7 @@ import os
 from typing import Any, Optional, TypedDict
 
 _WASM_EXTENSIONS = {".wasm"}
-_SOURCE_EXTENSIONS = {".py", ".ts", ".js", ".mjs"}
+_SOURCE_EXTENSIONS = {".py"}
 
 
 class RunnerOptions(TypedDict, total=False):
