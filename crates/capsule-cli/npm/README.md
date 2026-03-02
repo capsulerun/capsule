@@ -4,7 +4,7 @@
 
 ## Overview
 
-Capsule is a runtime for coordinating AI agent tasks in isolated environments. It is designed to handle long-running workflows, large-scale processing, autonomous decision-making securely, or even multi-agent systems.
+Capsule is a runtime for coordinating AI agent tasks in isolated environments. It is designed to handle untrusted code execution, long-running workflows, large-scale processing, or even multi-agent systems.
 
 Each task runs inside its own WebAssembly sandbox, providing:
 
@@ -12,6 +12,8 @@ Each task runs inside its own WebAssembly sandbox, providing:
 - **Resource limits**: Set CPU, memory, and timeout limits per task
 - **Automatic retries**: Handle failures without manual intervention
 - **Lifecycle tracking**: Monitor which tasks are running, completed, or failed
+
+This enables safe task-level execution of untrusted code within AI agent systems.
 
 ## Installation
 
@@ -44,6 +46,36 @@ capsule run hello.ts
 
 > Use `--verbose` to display real-time task execution details.
 
+## Production
+
+Running source code directly (like `.ts`) evaluates and compiles your file at runtime. While great for development, this compilation step adds a few seconds of latency. For use cases where sub-second latency is critical, you should build your tasks ahead of time.
+
+```bash
+# Generates an optimized hello.wasm file
+capsule build hello.ts --export
+
+# Execute the compiled artifact directly
+capsule exec hello.wasm
+```
+
+> [!NOTE]
+> Or from your existing code:
+>
+> ```typescript
+> import { run } from '@capsule-run/sdk/runner';
+>
+> const result = await run({
+>   file: './hello.wasm', // or `hello.ts`
+>   args: []
+> });
+>
+> console.log(`Task completed: ${result.result}`);
+> ```
+>
+> See [Integrate Into an Existing Project](#integrate-into-an-existing-project) for details.
+
+Executing a `.wasm` file bypasses the compiler completely, reducing initialization time to milliseconds while using a natively optimized (`.cwasm`) format behind the scenes.
+
 ## Integrate Into an Existing Project
 
 The `run()` function lets you execute tasks programmatically from your application code, no CLI needed.
@@ -54,7 +86,7 @@ The `run()` function lets you execute tasks programmatically from your applicati
 import { run } from '@capsule-run/sdk/runner';
 
 const result = await run({
-  file: './capsule.ts',
+  file: './capsule.ts', // or `capsule.wasm`
   args: ['code to execute']
 });
 ```
