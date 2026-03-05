@@ -27,10 +27,10 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@capsule-run/sdk": "^0.6.3",
+    "@capsule-run/cli": "^0.6.3",
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@capsule-run/cli": "^0.6.3",
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0"
   }

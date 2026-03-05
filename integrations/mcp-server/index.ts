@@ -4,14 +4,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { run } from "@capsule-run/sdk/runner";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { join } from "path";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const SANDBOX_PY = join(__dirname, "sandboxes", "python_sandbox.wasm");
-const SANDBOX_JS = join(__dirname, "sandboxes", "js_sandbox.wasm");
+const SANDBOX_PY = join(import.meta.dirname, "sandboxes", "python_sandbox.wasm");
+const SANDBOX_JS = join(import.meta.dirname, "sandboxes", "js_sandbox.wasm");
 
 async function invokeSandbox(wasmFile: string, code: string): Promise<string> {
   const res = await run({ file: wasmFile, args: [code] });
