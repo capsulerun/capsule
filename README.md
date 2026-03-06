@@ -130,7 +130,7 @@ capsule run hello.ts
 > [!TIP]
 > Add `--verbose` to see real-time task execution details.
 
-## In-Code Usage
+## Run from your code
 
 The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` are automatically forwarded as parameters to the `main` task.
 
@@ -140,7 +140,7 @@ The `run()` function lets you execute tasks programmatically from your code inst
 from capsule import run
 
 result = await run(
-    file="./sandbox.py", # or `sandbox.wasm`
+    file="./sandbox.py",
     args=["code to execute"]
 )
 ```
@@ -164,7 +164,7 @@ def main(code: str) -> str:
 import { run } from '@capsule-run/sdk/runner';
 
 const result = await run({
-  file: './sandbox.ts', // or `sandbox.wasm`
+  file: './sandbox.ts',
   args: ['code to execute']
 });
 ```
@@ -461,8 +461,6 @@ capsule exec hello.wasm
 >
 > print(f"Task completed: {result['result']}")
 > ```
->
-> See [in-code usage](#in-code-usage) for details on both Python and TypeScript integration.
 
 Executing a `.wasm` file bypasses the compiler completely, reducing initialization time to milliseconds while using a natively optimized (`.cwasm`) format behind the scenes.
 
@@ -471,7 +469,7 @@ Executing a `.wasm` file bypasses the compiler completely, reducing initializati
 > [!NOTE]
 > TypeScript/JavaScript has broader compatibility than Python since it doesn't rely on native bindings.
 
-**Python:** Only pure Python is supported in sandboxes (no C extensions like `numpy` or `pandas`). However, your host code using `run()` has access to the full Python ecosystem, any pip package and native extensions. (see [in-code usage](#in-code-usage))
+**Python:** Only pure Python is supported in sandboxes (no C extensions like `numpy` or `pandas`). However, your host code using `run()` has access to the full Python ecosystem, any pip package and native extensions. (see [in-code usage](#run-from-your-code))
 
 **TypeScript/JavaScript:** npm packages and ES modules work. Common Node.js built-ins are available. If you have any trouble with a built-in, do not hesitate to open an issue.
 
