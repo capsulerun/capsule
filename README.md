@@ -130,7 +130,7 @@ capsule run hello.ts
 > [!TIP]
 > Add `--verbose` to see real-time task execution details.
 
-## Run from your code
+## Or run from your code
 
 The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` are automatically forwarded as parameters to the `main` task.
 
@@ -152,7 +152,7 @@ from capsule import task
 
 @task(name="main", compute="LOW", ram="64MB")
 def main(code: str) -> str:
-    return exec(code)
+    return eval(code)
 ```
 
 ### TypeScript / JavaScript
