@@ -72,7 +72,7 @@ export const main = task({
 > [!NOTE]
 > The runtime requires a task named `"main"` as the entry point. Python will create one automatically if none is defined, but it's recommended to set it explicitly.
 
-When you run `capsule run main.py` (or `main.ts`), your code is compiled into a WebAssembly module and executed in a dedicated sandbox to isolate tasks.
+When you run `capsule run main.py` (or `main.ts`), your code is compiled into a WebAssembly module and executed in isolated sandboxes.
 
 Each task operates within its own sandbox with configurable resource limits, ensuring that failures are contained and don't cascade to other parts of your workflow. The host system controls every aspect of execution, from CPU allocation via Wasm fuel metering to memory constraints and timeout enforcement.
 
@@ -130,36 +130,58 @@ capsule run hello.ts
 > [!TIP]
 > Add `--verbose` to see real-time task execution details.
 
-## Production
+## In-Code Usage
 
-Running source code directly (like `.py` or `.ts`) evaluates and compiles your file at runtime. While great for development, this compilation step adds a few seconds of latency on first call. For use cases where sub-second latency is critical, you should build your tasks ahead of time.
+The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` are automatically forwarded as parameters to the `main` task.
 
-```bash
-# Generates an optimized hello.wasm file
-capsule build hello.py --export
+### Python
 
-# Execute the compiled artifact directly
-capsule exec hello.wasm
+```python
+from capsule import run
+
+result = await run(
+    file="./sandbox.py", # or `sandbox.wasm`
+    args=["code to execute"]
+)
 ```
 
-> [!NOTE]
-> Or from your existing code:
->
-> ```python
-> from capsule import run
->
-> result = await run(
->    file="./hello.wasm", # or `hello.py`
->    args=[]
-> )
->
-> print(f"Task completed: {result['result']}")
-> ```
->
-> See [in-code usage documentation](#in-code-usage) for details on both Python and TypeScript integration.
+Create `sandbox.py`:
 
+```python
+from capsule import task
 
-Executing a `.wasm` file bypasses the compiler completely, reducing initialization time to milliseconds while using a natively optimized (`.cwasm`) format behind the scenes.
+@task(name="main", compute="LOW", ram="64MB")
+def main(code: str) -> str:
+    return exec(code)
+```
+
+### TypeScript / JavaScript
+
+> [!IMPORTANT]
+> You need `@capsule-run/cli` in your dependencies to use the runner functions in TypeScript.
+
+```typescript
+import { run } from '@capsule-run/sdk/runner';
+
+const result = await run({
+  file: './sandbox.ts', // or `sandbox.wasm`
+  args: ['code to execute']
+});
+```
+
+Create `sandbox.ts`:
+
+```typescript
+import { task } from "@capsule-run/sdk";
+
+export const main = task({
+  name: "main",
+  compute: "LOW",
+  ram: "64MB"
+}, (code: string): string => {
+  return eval(code);
+});
+```
 
 ## Documentation (v0.6.3)
 
@@ -185,7 +207,6 @@ Capsule controls CPU usage through WebAssembly's **fuel mechanism**, which meter
 - **MEDIUM** offers balanced resources for typical workloads
 - **HIGH** grants maximum fuel for compute-intensive operations
 - **CUSTOM** to specify an exact fuel value (e.g., `compute="1000000"`) for precise control over execution limits.
-
 
 ### Response Format
 
@@ -213,34 +234,6 @@ Every task returns a structured JSON envelope containing both the result and exe
   - `duration_ms` — Execution time in milliseconds
   - `retries` — Number of retry attempts that occurred
   - `fuel_consumed` — CPU resources used (see [Compute Levels](#compute-levels))
- 
-
-### Project Configuration (Optional)
-
-You can create a `capsule.toml` file in your project root to set default options for all tasks and define workflow metadata:
-
-```toml
-# capsule.toml
-
-[workflow]
-name = "My AI Workflow"
-version = "1.0.0"
-entrypoint = "src/main.py"  # Default file when running `capsule run`
-
-[tasks]
-default_compute = "MEDIUM"
-default_ram = "256MB"
-default_timeout = "30s"
-default_max_retries = 2
-```
-
-With an entrypoint defined, you can simply run:
-
-```bash
-capsule run
-```
-
-Task-level options always override these defaults when specified.
 
 ### HTTP Client API
 
@@ -394,58 +387,32 @@ export const main = task({
 });
 ```
 
-### In-Code Usage
+### Project Configuration (Optional)
 
-The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` are automatically forwarded as parameters to the `main` task.
+You can create a `capsule.toml` file in your project root to set default options for all tasks and define workflow metadata:
 
-#### Python
+```toml
+# capsule.toml
 
-```python
-from capsule import run
+[workflow]
+name = "My AI Workflow"
+version = "1.0.0"
+entrypoint = "src/main.py"  # Default file when running `capsule run`
 
-result = await run(
-    file="./sandbox.py", # or `sandbox.wasm`
-    args=["code to execute"]
-)
+[tasks]
+default_compute = "MEDIUM"
+default_ram = "256MB"
+default_timeout = "30s"
+default_max_retries = 2
 ```
 
-Create `sandbox.py`:
+With an entrypoint defined, you can simply run:
 
-```python
-from capsule import task
-
-@task(name="main", compute="LOW", ram="64MB")
-def main(code: str) -> str:
-    return exec(code)
+```bash
+capsule run
 ```
 
-#### TypeScript / JavaScript
-
-> [!IMPORTANT]
-> You need `@capsule-run/cli` in your dependencies to use the runner functions in TypeScript.
-
-```typescript
-import { run } from '@capsule-run/sdk/runner';
-
-const result = await run({
-  file: './sandbox.ts', // or `sandbox.wasm`
-  args: ['code to execute']
-});
-```
-
-Create `sandbox.ts`:
-
-```typescript
-import { task } from "@capsule-run/sdk";
-
-export const main = task({
-  name: "main",
-  compute: "LOW",
-  ram: "64MB"
-}, (code: string): string => {
-  return eval(code);
-});
-```
+Task-level options always override these defaults when specified.
 
 ### Cache Management
 
@@ -468,6 +435,36 @@ Use `capsule build` to precompile ahead of time and skip the compilation cost on
 ```bash
 capsule build main.ts # or `main.py`
 ```
+
+## Production
+
+Running source code directly (like `.py` or `.ts`) evaluates and compiles your file at runtime. While great for development, this compilation step adds a few seconds of latency on first call. For use cases where sub-second latency is critical, you should build your tasks ahead of time.
+
+```bash
+# Generates an optimized hello.wasm file
+capsule build hello.py --export
+
+# Execute the compiled artifact directly
+capsule exec hello.wasm
+```
+
+> [!NOTE]
+> Or from your existing code:
+>
+> ```python
+> from capsule import run
+>
+> result = await run(
+>    file="./hello.wasm", # or `hello.py`
+>    args=[]
+> )
+>
+> print(f"Task completed: {result['result']}")
+> ```
+>
+> See [in-code usage documentation](#in-code-usage) for details on both Python and TypeScript integration.
+
+Executing a `.wasm` file bypasses the compiler completely, reducing initialization time to milliseconds while using a natively optimized (`.cwasm`) format behind the scenes.
 
 ## Compatibility
 
