@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/mavdol/capsule/actions/workflows/ci.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/ci.yml)
 
-[Getting Started](#getting-started) • [Documentation](#documentation-v063) • [Contributing](#contributing)
+[Getting Started](#getting-started) • [Documentation](#documentation) • [Contributing](#contributing)
 
 </div>
 
@@ -183,7 +183,7 @@ export const main = task({
 });
 ```
 
-## Documentation (v0.6.3)
+## Documentation
 
 ### Task Configuration Options
 
