@@ -1,7 +1,7 @@
 import { task } from "@capsule-run/sdk";
 
 export const executeCode = task(
-  { name: "executeCode", compute: 20000000, ram: "256MB"},
+  { name: "executeCode", compute: "LOW", ram: "256MB"},
   async (code: string): Promise<any> => {
     const capturedOutput: string[] = [];
     const originalLog = console.log;

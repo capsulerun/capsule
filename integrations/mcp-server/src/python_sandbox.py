@@ -3,7 +3,7 @@ import sys
 from io import StringIO
 from capsule import task
 
-@task(name="executeCode", compute="20000000", ram="256MB")
+@task(name="executeCode", compute="LOW", ram="256MB")
 def execute_code(code: str):
     tree = ast.parse(code)
 
