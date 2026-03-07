@@ -130,7 +130,7 @@ capsule run hello.ts
 > [!TIP]
 > Add `--verbose` to see real-time task execution details.
 
-## Or Run From Your Code
+## Run From Your Code
 
 The `run()` function lets you execute tasks programmatically from your code instead of using the CLI. The `args` are automatically forwarded as parameters to the `main` task.
 

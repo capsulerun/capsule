@@ -1,0 +1,37 @@
+{
+  "name": "@capsule-run/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server to run untrusted python/js code in wasm sandboxes",
+  "license": "Apache-2.0",
+  "author": "",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "capsule-mcp-server": "dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mavdol/capsule.git"
+  },
+  "homepage": "https://github.com/mavdol/capsule",
+  "scripts": {
+    "build:ts": "tsc",
+    "build:wasm:py": "capsule build src/python_sandbox.py --export && mv src/python_sandbox.wasm dist/sandboxes/python_sandbox.wasm",
+    "build:wasm:js": "capsule build src/js_sandbox.ts --export && mv src/js_sandbox.wasm dist/sandboxes/js_sandbox.wasm",
+    "build:wasm": "npm run build:wasm:py && npm run build:wasm:js",
+    "build": "npm run build:wasm && npm run build:ts"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@capsule-run/sdk": "^0.6.3",
+    "@capsule-run/cli": "^0.6.3",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
