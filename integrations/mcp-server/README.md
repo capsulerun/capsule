@@ -42,7 +42,7 @@ Add to your MCP client configuration (e.g. Claude Desktop `claude_desktop_config
 ```json
 {
   "mcpServers": {
-    "@capsule-run/mcp-server": {
+    "capsule": {
       "command": "npx",
       "args": ["-y", "@capsule-run/mcp-server"]
     }
