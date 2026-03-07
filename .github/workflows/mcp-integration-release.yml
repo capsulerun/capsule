@@ -41,6 +41,10 @@ jobs:
       - name: Install @capsule-run/cli (npm)
         run: npm install -g @capsule-run/cli
 
+      - name: Install dependencies
+        working-directory: integrations/mcp-server
+        run: npm ci
+
       - name: Build js_sandbox.wasm
         working-directory: integrations/mcp-server
         run: |
@@ -103,7 +107,7 @@ jobs:
       - name: Set version
         if: steps.check_version.outputs.exists != 'true'
         working-directory: integrations/mcp-server
-        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Publish
         if: steps.check_version.outputs.exists != 'true'
