@@ -22,7 +22,7 @@ async function invokeSandbox(wasmFile: string, code: string): Promise<string> {
 }
 
 const server = new McpServer({
-  name: "capsule-sandbox",
+  name: "@capsule-run/mcp-server",
   version: "0.1.0",
 });
 
