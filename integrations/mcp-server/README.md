@@ -1,6 +1,6 @@
 # `Capsule` MCP Server
 
-[![CI](https://github.com/mavdol/capsule/actions/workflows/ci.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/ci.yml)
+[![MCP Server Release](https://github.com/mavdol/capsule/actions/workflows/mcp-integration-release.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/mcp-integration-release.yml)
 
 Give your AI agent the ability to write and run Python and JavaScript code, in a secure sandbox.
 
@@ -33,8 +33,6 @@ best_month = growth.index(max(growth)) + 2  # +2 for 1-indexed and offset
 
 → `{"average": 16966.67, "best_growth_month": 4, "growth": 4700}`
 
-The code runs in a Wasm sandbox, the result comes back, and nothing was executed on your system.
-
 ## Setup
 
 Add to your MCP client configuration:
@@ -50,12 +48,6 @@ Add to your MCP client configuration:
 }
 ```
 
-or with other solution like `add-mcp` :
-
-```bash
-npx add-mcp "npx -y @capsule-run/mcp-server"
-```
-
 ## How It Works
 
 The server ships two pre-compiled WebAssembly modules: one for Python, one for JavaScript. When a tool is called, the code is executed via `capsule` inside a dedicated Wasm sandbox with:
@@ -68,21 +60,5 @@ Learn more about [Capsule](https://github.com/mavdol/capsule).
 
 ## Limitations
 
-> [!NOTE]
-> JavaScript sandbox has standard network access and a broader compatibility since it doesn't rely on native bindings.
-
 - **Stateless** — each execution starts from a clean sandbox. There is no shared state between calls. To chain results, pass previous outputs as inputs to the next execution.
 - **Python HTTP** — standard networking libraries are not compatible with the Wasm sandbox.
-
-## Build
-
-```bash
-npm install
-
-# Build everything (wasm sandboxes + TypeScript)
-npm run build
-
-# Or separately:
-npm run build:wasm   # compile sandbox sources to .wasm
-npm run build:ts     # compile TypeScript to dist/
-```
