@@ -32,14 +32,13 @@ server.registerTool(
     title: "Execute Python",
     description:
       "Execute Python code in a secure isolated WebAssembly sandbox. " +
-      "The last evaluated expression is returned as the result. " +
-      "Supports pure Python only (no C extensions like numpy/pandas). " +
-      "End your code with an expression to get a return value.",
+      "Both standard output (print statements) and the last evaluated expression are returned. " +
+      "Supports pure Python only (no C extensions like numpy/pandas).",
     inputSchema: {
       code: z
         .string()
         .describe(
-          "Python code to execute. The last expression is returned as the result."
+          "Python code to execute. Standard output and the final expression are returned."
         ),
     },
   },
@@ -67,13 +66,12 @@ server.registerTool(
     title: "Execute JavaScript",
     description:
       "Execute JavaScript code in a secure isolated WebAssembly sandbox. " +
-      "The last evaluated expression is returned as the result. " +
-      "End your code with an expression to get a return value.",
+      "Both standard output (console logs) and the last evaluated expression are returned.",
     inputSchema: {
       code: z
         .string()
         .describe(
-          "JavaScript code to execute. The last expression is returned as the result."
+          "JavaScript code to execute. Standard output and the final expression are returned."
         ),
     },
   },

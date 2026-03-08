@@ -1,6 +1,6 @@
 {
   "name": "@capsule-run/mcp-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server to run untrusted python/js code in wasm sandboxes",
   "license": "Apache-2.0",
   "author": "",
@@ -26,8 +26,8 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
-    "@capsule-run/sdk": "^0.6.3",
-    "@capsule-run/cli": "^0.6.3",
+    "@capsule-run/sdk": "latest",
+    "@capsule-run/cli": "latest",
     "zod": "^3.24.0"
   },
   "devDependencies": {

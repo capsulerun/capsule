@@ -3,14 +3,35 @@ import { task } from "@capsule-run/sdk";
 export const executeCode = task(
   { name: "executeCode", compute: "LOW", ram: "256MB"},
   async (code: string): Promise<any> => {
+    const capturedOutput: string[] = [];
+    const originalLog = console.log;
+
+    console.log = (...args: any[]) => {
+      capturedOutput.push(args.map(arg => String(arg)).join(' '));
+    };
+
     try {
-      return eval(code);
-    } catch (e) {
-      if (e instanceof SyntaxError && e.message.includes("return")) {
-        const fn = new Function(code);
-        return fn();
+      let result;
+      try {
+        result = eval(code);
+      } catch (e) {
+        if (e instanceof SyntaxError && e.message.includes("return")) {
+          const fn = new Function(code);
+          result = fn();
+        } else {
+          throw e;
+        }
       }
-      throw e;
+
+      const output = capturedOutput.join('\n');
+
+      if (output) {
+        return output + '\n' + result;
+      }
+
+      return result;
+    } finally {
+      console.log = originalLog;
     }
   }
 );

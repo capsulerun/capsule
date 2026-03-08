@@ -2,7 +2,7 @@
 
 Give your AI agent the ability to write and run Python and JavaScript code, in a secure sandbox.
 
-Every execution happens inside its own WebAssembly sandbox with strict resource limits. No file system access, no network by default, no risk to your host machine.
+Every execution happens inside its own WebAssembly sandbox with strict resource limits. No file system access, no risk to your host machine.
 
 ## Tools
 
@@ -10,8 +10,6 @@ Every execution happens inside its own WebAssembly sandbox with strict resource 
 |------|-------------|
 | `execute_python` | Run Python code in an isolated sandbox |
 | `execute_javascript` | Run JavaScript code in an isolated sandbox |
-
-Each tool returns the result of the last evaluated expression.
 
 ### Example
 
@@ -55,10 +53,19 @@ Add to your MCP client configuration (e.g. Claude Desktop `claude_desktop_config
 The server ships two pre-compiled WebAssembly modules: one for Python, one for JavaScript. When a tool is called, the code is executed via `capsule` inside a dedicated Wasm sandbox with:
 
 - **Isolated memory** — each execution gets its own address space
-- **CPU limits** — fuel-metered execution prevents runaway loops
+- **CPU/Ram limits** — fuel-metered execution prevents runaway loops
 - **No host access** — no filesystem or network unless explicitly allowed
 
 See more about [Capsule](https://github.com/mavdol/capsule).
+
+## Limitations
+
+- **Stateless** — each execution starts from a clean sandbox. There is no shared state between calls. To chain results, pass previous outputs as inputs to the next execution.
+- **Pure Python** — only the Python standard library is available
+- **Python HTTP** — standard networking libraries are not compatible with the Wasm sandbox.
+
+> [!NOTE]
+> JavaScript sandbox has standard network access and a broader compatibility since it doesn't rely on native bindings.
 
 ## Build
 

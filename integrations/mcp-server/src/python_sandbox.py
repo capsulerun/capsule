@@ -1,4 +1,6 @@
 import ast
+import sys
+from io import StringIO
 from capsule import task
 
 @task(name="executeCode", compute="LOW", ram="256MB")
@@ -12,14 +14,28 @@ def execute_code(code: str):
 
     local_env = {}
 
-    if isinstance(last_node, ast.Expr):
-        tree.body.pop()
-        if tree.body:
+    captured_output = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = captured_output
+
+    try:
+        if isinstance(last_node, ast.Expr):
+            tree.body.pop()
+            if tree.body:
+                exec(compile(tree, filename="<ast>", mode="exec"), local_env)
+            result = eval(compile(ast.Expression(last_node.value), filename="<ast>", mode="eval"), local_env)
+        else:
             exec(compile(tree, filename="<ast>", mode="exec"), local_env)
-        return eval(compile(ast.Expression(last_node.value), filename="<ast>", mode="eval"), local_env)
-    else:
-        exec(compile(tree, filename="<ast>", mode="exec"), local_env)
-        return local_env.get("result")
+            result = local_env.get("result")
+    finally:
+        sys.stdout = old_stdout
+
+    output = captured_output.getvalue()
+
+    if output:
+        return output + str(result)
+
+    return result
 
 @task(name="main", compute="HIGH")
 def main(code: str):
