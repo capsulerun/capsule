@@ -1,4 +1,6 @@
-# Capsule MCP Server
+# `Capsule` MCP Server
+
+[![CI](https://github.com/mavdol/capsule/actions/workflows/ci.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/ci.yml)
 
 Give your AI agent the ability to write and run Python and JavaScript code, in a secure sandbox.
 
@@ -35,7 +37,7 @@ The code runs in a Wasm sandbox, the result comes back, and nothing was executed
 
 ## Setup
 
-Add to your MCP client configuration (e.g. Claude Desktop `claude_desktop_config.json`):
+Add to your MCP client configuration:
 
 ```json
 {
@@ -48,6 +50,12 @@ Add to your MCP client configuration (e.g. Claude Desktop `claude_desktop_config
 }
 ```
 
+or with other solution like `add-mcp` :
+
+```bash
+npx add-mcp "npx -y @capsule-run/mcp-server"
+```
+
 ## How It Works
 
 The server ships two pre-compiled WebAssembly modules: one for Python, one for JavaScript. When a tool is called, the code is executed via `capsule` inside a dedicated Wasm sandbox with:
@@ -56,16 +64,15 @@ The server ships two pre-compiled WebAssembly modules: one for Python, one for J
 - **CPU/Ram limits** — fuel-metered execution prevents runaway loops
 - **No host access** — no filesystem or network unless explicitly allowed
 
-See more about [Capsule](https://github.com/mavdol/capsule).
+Learn more about [Capsule](https://github.com/mavdol/capsule).
 
 ## Limitations
 
-- **Stateless** — each execution starts from a clean sandbox. There is no shared state between calls. To chain results, pass previous outputs as inputs to the next execution.
-- **Pure Python** — only the Python standard library is available
-- **Python HTTP** — standard networking libraries are not compatible with the Wasm sandbox.
-
 > [!NOTE]
 > JavaScript sandbox has standard network access and a broader compatibility since it doesn't rely on native bindings.
+
+- **Stateless** — each execution starts from a clean sandbox. There is no shared state between calls. To chain results, pass previous outputs as inputs to the next execution.
+- **Python HTTP** — standard networking libraries are not compatible with the Wasm sandbox.
 
 ## Build
 
@@ -79,7 +86,3 @@ npm run build
 npm run build:wasm   # compile sandbox sources to .wasm
 npm run build:ts     # compile TypeScript to dist/
 ```
-
-## License
-
-Apache-2.0
