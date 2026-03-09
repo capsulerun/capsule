@@ -1,4 +1,4 @@
-# Capsule Integrations
+# `Capsule` Integrations
 
 This directory contains integrations for Capsule with popular AI frameworks and tools, making it easy to incorporate Capsule's capabilities into your existing workflows.
 
