@@ -64,14 +64,15 @@ jobs:
         with:
           tool: cross
 
-      - name: Build
+      - name: Build (cross)
+        if: contains(matrix.target, 'musl')
         working-directory: crates/capsule-cli
-        run: |
-          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            cross build --release --target ${{ matrix.target }}
-          else
-            cargo build --release --target ${{ matrix.target }}
-          fi
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Build (cargo)
+        if: "!contains(matrix.target, 'musl')"
+        working-directory: crates/capsule-cli
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
