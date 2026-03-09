@@ -8,6 +8,7 @@ const PLATFORMS = {
   "darwin-arm64": "@capsule-run/cli-darwin-arm64",
   "darwin-x64": "@capsule-run/cli-darwin-x64",
   "linux-x64": "@capsule-run/cli-linux-x64",
+  "linux-arm64": "@capsule-run/cli-linux-arm64",
   "win32-x64": "@capsule-run/cli-win32-x64",
 };
 
