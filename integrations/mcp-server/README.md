@@ -4,7 +4,7 @@
 
 Give your AI agent the ability to write and run Python and JavaScript code, in a secure sandbox.
 
-Every execution happens inside its own WebAssembly sandbox with strict resource limits. No file system access, no risk to your host machine.
+Every execution happens inside its own WebAssembly sandbox with strict resource limits. No file system access, no risk to your host system.
 
 ## Tools
 
