@@ -1,0 +1,35 @@
+{
+  "name": "@capsule-run/adapter",
+  "version": "0.1.0",
+  "description": "Capsule adapter for typescript applications",
+  "license": "Apache-2.0",
+  "author": "",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "capsule-adapter": "dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mavdol/capsule.git"
+  },
+  "homepage": "https://github.com/mavdol/capsule",
+  "scripts": {
+    "build:ts": "tsc",
+    "build:wasm:py": "capsule build src/python_sandbox.py --export && mv src/python_sandbox.wasm dist/sandboxes/python_sandbox.wasm",
+    "build:wasm:js": "capsule build src/js_sandbox.ts --export && mv src/js_sandbox.wasm dist/sandboxes/js_sandbox.wasm",
+    "build:wasm": "npm run build:wasm:py && npm run build:wasm:js",
+    "build": "npm run build:wasm && npm run build:ts"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "dependencies": {
+    "@capsule-run/sdk": "latest",
+    "@capsule-run/cli": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

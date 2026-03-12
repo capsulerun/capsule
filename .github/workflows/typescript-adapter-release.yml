@@ -1,0 +1,115 @@
+name: TypeScript Adapter
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish'
+        required: true
+
+jobs:
+  build-wasm:
+    name: Build WebAssembly sandboxes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install capsule-run (PyPI)
+        run: pip install capsule-run
+
+      - name: Build python_sandbox.wasm
+        working-directory: integrations/adapter/typescript
+        run: |
+          mkdir -p dist/sandboxes
+          capsule build src/python_sandbox.py --export
+          mv src/python_sandbox.wasm dist/sandboxes/python_sandbox.wasm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install @capsule-run/cli (npm)
+        run: npm install -g @capsule-run/cli
+
+      - name: Install dependencies
+        working-directory: integrations/adapter/typescript
+        run: npm ci
+
+      - name: Build js_sandbox.wasm
+        working-directory: integrations/adapter/typescript
+        run: |
+          capsule build src/js_sandbox.ts --export
+          mv src/js_sandbox.wasm dist/sandboxes/js_sandbox.wasm
+
+      - name: Upload wasm sandboxes
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-sandboxes
+          path: integrations/adapter/typescript/dist/sandboxes/
+
+  publish-adapter-typescript:
+    name: Publish @capsule-run/adapter
+    needs: build-wasm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION="${{ github.event.release.tag_name || github.event.inputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if package version exists
+        id: check_version
+        run: |
+          if (npm view @capsule-run/adapter@${{ steps.version.outputs.version }} version) > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.check_version.outputs.exists != 'true'
+        working-directory: integrations/adapter/typescript
+        run: npm ci
+
+      - name: Compile TypeScript
+        if: steps.check_version.outputs.exists != 'true'
+        working-directory: integrations/adapter/typescript
+        run: npm run build:ts
+
+      - name: Download wasm sandboxes
+        if: steps.check_version.outputs.exists != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-sandboxes
+          path: integrations/adapter/typescript/dist/sandboxes/
+
+      - name: Set version
+        if: steps.check_version.outputs.exists != 'true'
+        working-directory: integrations/adapter/typescript
+        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+
+      - name: Publish
+        if: steps.check_version.outputs.exists != 'true'
+        working-directory: integrations/adapter/typescript
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
