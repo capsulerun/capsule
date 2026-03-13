@@ -5,11 +5,13 @@ This directory contains integrations for Capsule with popular AI frameworks and 
 ## Available Integrations
 
 - [MCP Server](https://github.com/mavdol/capsule/tree/main/integrations/mcp-server) - Model Context Protocol server implementation
+- [Typecript adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter) - Adapter to run Python/JavaScript code from your Typescript applications
 
 ## External Integrations
 
 - [langchain-capsule](https://github.com/mavdol/langchain-capsule) - LangChain integration
 - [smolagents-capsule](https://github.com/mavdol/smolagents-capsule) - smolagents integration
+- [crewAI-capsule](https://github.com/mavdol/crewAI-capsule) - crewAI integration
 - [mastra-capsule](https://github.com/mavdol/mastra-capsule) - Mastra integration
 
 ---
