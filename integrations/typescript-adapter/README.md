@@ -38,6 +38,29 @@ x * 2;
 console.log(result); // "Hello from JavaScript!\n16"
 ```
 
+### Preload Sandboxes (Optional)
+
+The first execution of a sandbox has a cold start (~1 second). You can preload sandboxes to warm them up for faster subsequent executions (~10ms):
+
+```typescript
+import { loadSandboxes, executePython } from '@capsule-run/adapter';
+
+// Preload both sandboxes in parallel
+await loadSandboxes();
+
+// Now executions will be faster
+const result = await executePython('print("Fast!")');
+```
+
+Or preload individually:
+
+```typescript
+import { loadPythonSandbox, loadJavaScriptSandbox } from '@capsule-run/adapter';
+
+await loadPythonSandbox();      // Warm up Python only
+await loadJavaScriptSandbox();  // Warm up JavaScript only
+```
+
 ## How It Works
 
 The adapter compiles Python and JavaScript sandboxes into WebAssembly modules during the build step. When you call `executePython()` or `executeJavaScript()`, the adapter invokes these pre-built sandboxes using Capsule's runner with the code you provide.

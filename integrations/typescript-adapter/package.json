@@ -1,6 +1,6 @@
 {
   "name": "@capsule-run/adapter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Capsule adapter for typescript applications",
   "license": "Apache-2.0",
   "author": "",
