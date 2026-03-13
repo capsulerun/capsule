@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "capsule-run-adapter"
+version = "0.1.0"
+description = "Capsule adapter for Python applications — execute Python and JavaScript code in isolated WebAssembly sandboxes"
+license = { text = "Apache-2.0" }
+readme = "README.md"
+authors = [
+    {name = "Capsule Contributors"}
+]
+
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "capsule-run>=0.6.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/mavdol/capsule"
+Repository = "https://github.com/mavdol/capsule/tree/main/integrations/python-adapter"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["capsule_adapter"]
+artifacts = ["capsule_adapter/sandboxes/*.wasm"]
+
+[tool.hatch.metadata]
+allow-direct-references = true

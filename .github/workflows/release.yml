@@ -296,12 +296,6 @@ jobs:
             f.write(content)
           "
 
-      # - name: Build and publish
-      #   working-directory: crates/capsule-cli
-      #   run: maturin publish --skip-existing
-      #   env:
-      #     MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-
       - name: Build and publish
         uses: PyO3/maturin-action@v1
         with:

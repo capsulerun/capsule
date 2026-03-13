@@ -5,6 +5,7 @@ This directory contains integrations for Capsule with popular AI frameworks and 
 ## Available Integrations
 
 - [MCP Server](https://github.com/mavdol/capsule/tree/main/integrations/mcp-server) - Model Context Protocol server implementation
+- [Python adapter](https://github.com/mavdol/capsule/tree/main/integrations/python-adapter) - Adapter to run Python/JavaScript code from your Python applications
 - [Typecript adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter) - Adapter to run Python/JavaScript code from your Typescript applications
 
 ## External Integrations
