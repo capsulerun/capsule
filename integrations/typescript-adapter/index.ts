@@ -16,6 +16,21 @@ async function invokeSandbox(wasmFile: string, code: string): Promise<string> {
   return JSON.stringify(res.result);
 }
 
+export async function loadJavaScriptSandbox(): Promise<void> {
+  await invokeSandbox(SANDBOX_JS, "// pre-load sandbox");
+}
+
+export async function loadPythonSandbox(): Promise<void> {
+  await invokeSandbox(SANDBOX_PY, "# pre-load sandbox");
+}
+
+export async function loadSandboxes(): Promise<void> {
+  await Promise.all([
+    loadPythonSandbox(),
+    loadJavaScriptSandbox()
+  ]);
+}
+
 export async function executePython(code: string): Promise<string> {
   return await invokeSandbox(SANDBOX_PY, code);
 }

@@ -24,7 +24,7 @@ jobs:
         run: pip install capsule-run
 
       - name: Build python_sandbox.wasm
-        working-directory: integrations/adapter/typescript
+        working-directory: integrations/typescript-adapter
         run: |
           mkdir -p dist/sandboxes
           capsule build src/python_sandbox.py --export
@@ -40,11 +40,11 @@ jobs:
         run: npm install -g @capsule-run/cli
 
       - name: Install dependencies
-        working-directory: integrations/adapter/typescript
+        working-directory: integrations/typescript-adapter
         run: npm ci
 
       - name: Build js_sandbox.wasm
-        working-directory: integrations/adapter/typescript
+        working-directory: integrations/typescript-adapter
         run: |
           capsule build src/js_sandbox.ts --export
           mv src/js_sandbox.wasm dist/sandboxes/js_sandbox.wasm
@@ -53,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wasm-sandboxes
-          path: integrations/adapter/typescript/dist/sandboxes/
+          path: integrations/typescript-adapter/dist/sandboxes/
 
   publish-adapter-typescript:
     name: Publish @capsule-run/adapter
@@ -87,12 +87,12 @@ jobs:
 
       - name: Install dependencies
         if: steps.check_version.outputs.exists != 'true'
-        working-directory: integrations/adapter/typescript
+        working-directory: integrations/typescript-adapter
         run: npm ci
 
       - name: Compile TypeScript
         if: steps.check_version.outputs.exists != 'true'
-        working-directory: integrations/adapter/typescript
+        working-directory: integrations/typescript-adapter
         run: npm run build:ts
 
       - name: Download wasm sandboxes
@@ -100,16 +100,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: wasm-sandboxes
-          path: integrations/adapter/typescript/dist/sandboxes/
+          path: integrations/typescript-adapter/dist/sandboxes/
 
       - name: Set version
         if: steps.check_version.outputs.exists != 'true'
-        working-directory: integrations/adapter/typescript
+        working-directory: integrations/typescript-adapter
         run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Publish
         if: steps.check_version.outputs.exists != 'true'
-        working-directory: integrations/adapter/typescript
+        working-directory: integrations/typescript-adapter
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
