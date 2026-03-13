@@ -40,6 +40,11 @@ jobs:
       - name: Install @capsule-run/cli (npm)
         run: npm install -g @capsule-run/cli
 
+      - name: Setup package.json for SDK
+        run: |
+          echo '{"type": "module"}' > package.json
+          npm install @capsule-run/sdk
+
       - name: Build js_sandbox.wasm
         working-directory: integrations/python-adapter
         run: |
