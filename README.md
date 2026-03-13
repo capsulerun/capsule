@@ -130,7 +130,7 @@ capsule run hello.ts
 > [!TIP]
 > Add `--verbose` to see real-time task execution details.
 
-If you're looking for a pre-configured, ready-to-use solution, check out the [TypeScript adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter) 
+If you're looking for a pre-configured, ready-to-use solution, check out the [Python adapter](https://github.com/mavdol/capsule/tree/main/integrations/python-adapter) or [TypeScript adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter).
 
 ## Run From Your Code
 

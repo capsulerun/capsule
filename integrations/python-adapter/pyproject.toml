@@ -37,8 +37,8 @@ test = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["capsule_run_adapter"]
-artifacts = ["capsule_run_adapter/sandboxes/*.wasm"]
+packages = ["capsule_adapter"]
+artifacts = ["capsule_adapter/sandboxes/*.wasm"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
