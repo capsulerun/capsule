@@ -13,5 +13,3 @@ capsule.egg-info
 *.pdb
 **/mutants.out*/
 node_modules
-
-*.wasm
