@@ -183,7 +183,8 @@ export const main = task({
 });
 ```
 
-If you're looking for a pre-configured, ready-to-use solution, check out the [Python adapter](https://github.com/mavdol/capsule/tree/main/integrations/python-adapter) or [TypeScript adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter).
+> [!TIP]
+> If you're looking for a pre-configured, ready-to-use solution, check out the [Python adapter](https://github.com/mavdol/capsule/tree/main/integrations/python-adapter) or [TypeScript adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter).
 
 ## Documentation
 
