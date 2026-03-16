@@ -1,8 +1,6 @@
 name: Python Adapter
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       version:
