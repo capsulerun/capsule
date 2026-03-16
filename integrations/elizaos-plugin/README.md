@@ -42,7 +42,7 @@ Result: 55
 
 ## How It Works
 
-The plugin uses Capsule to execute code in secure sandboxes. When initialized, it preloads the sandboxes for fast execution. The agent can then execute code by including Python or JavaScript code blocks in its responses. It uses a pre-built [adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter) with the default sandboxes included to make things even easier.
+The plugin uses Capsule to execute code in secure sandboxes. It uses a pre-built [adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter) with the default sandboxes included to make it simple to use.
 
 Learn more about [Capsule](https://github.com/mavdol/capsule).
 
