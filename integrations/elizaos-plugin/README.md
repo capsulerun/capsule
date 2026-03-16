@@ -1,77 +1,48 @@
-# Capsule ElizaOS Plugin
+# `Capsule` ElizaOS Plugin
 
-Execute Python and JavaScript code securely in your ElizaOS agents using [Capsule](https://github.com/mavdol/capsule) sandboxes.
+[![@capsule-run/elizaos-plugin Release](https://github.com/mavdol/capsule/actions/workflows/elizaos-plugin-release.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/elizaos-plugin-release.yml)
+
+Execute Python and JavaScript code securely in your ElizaOS agents using local WASM sandboxes.
 
 ## Installation
 
 ```bash
-npm install @capsule-run/elizaos-plugin
+bun install @capsule-run/elizaos-plugin
 ```
 
 ## Usage
 
-Add the plugin to your ElizaOS agent:
+Add the plugin to your ElizaOS agent configuration:
 
 ```typescript
 import { capsulePlugin } from '@capsule-run/elizaos-plugin';
 
 const agent = {
+  name: "assistant",
   plugins: [capsulePlugin],
+  // ... other agent config
 };
 ```
 
-## What It Does
+## Available Actions
 
-Your agent can now execute code when users ask questions like:
+### `EXECUTE_CODE`
 
-- **"Calculate 156 * 23"** → Runs Python: `156 * 23` → Returns: `3588`
-- **"What is the sum of 1 to 100?"** → Executes code → Returns: `5050`
-- **"Generate 10 random numbers"** → Runs Python script → Returns array
-- **"Sort this array: [5,2,8,1]"** → Executes JavaScript → Returns sorted array
+Executes Python or JavaScript code in a secure Capsule sandbox.
 
-The agent automatically decides when to use code execution and generates the code itself.
+**Aliases:** `RUN_CODE`, `EVAL_CODE`, `CODE_EXEC`, `RUN_PYTHON`, `RUN_JAVASCRIPT`
+
+**Example Interactions:**
+
+```
+User: Calculate the fibonacci of 10
+Agent: *generates and safely executes Python code*
+Result: 55
+```
 
 ## How It Works
 
-1. User asks a question that needs computation
-2. The agent's LLM recognizes it needs code execution
-3. The LLM generates Python or JavaScript code
-4. Code runs in a secure Capsule WebAssembly sandbox
-5. Result is returned to the user
+The plugin uses Capsule to execute code in secure sandboxes. When initialized, it preloads the sandboxes for fast execution. The agent can then execute code by including Python or JavaScript code blocks in its responses. It uses a pre-built [adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter) with the default sandboxes included to make things even easier.
 
-## Features
+Learn more about [Capsule](https://github.com/mavdol/capsule).
 
-- ✅ **Secure** - Code runs in isolated WebAssembly sandboxes
-- ✅ **Fast** - Pre-warmed sandboxes (~10ms execution)
-- ✅ **Local** - No external API calls or paid services
-- ✅ **Dual Language** - Supports Python and JavaScript
-- ✅ **Smart** - LLM decides when to use code execution
-
-## Example
-
-```
-User: "What's 15% of 2500?"
-
-Agent: *uses EXECUTE_CODE action*
-       *generates: 2500 * 0.15*
-       *executes in Capsule sandbox*
-
-Agent: "The result is 375"
-```
-
-## Development
-
-```bash
-# Install dependencies
-bun install
-
-# Build
-bun run build
-
-# Test
-bun test
-```
-
-## License
-
-Apache-2.0
