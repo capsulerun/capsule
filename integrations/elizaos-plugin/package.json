@@ -1,0 +1,67 @@
+{
+  "name": "@capsule-run/elizaos-plugin",
+  "description": "Capsule code execution plugin for ElizaOS - Run Python and JavaScript code securely",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "packageType": "plugin",
+  "platform": "node",
+  "license": "Apache-2.0",
+  "keywords": [
+    "plugin",
+    "elizaos",
+    "capsule",
+    "code-execution",
+    "python",
+    "javascript",
+    "sandbox"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mavdol/capsule"
+  },
+  "homepage": "https://elizaos.ai",
+  "bugs": {
+    "url": "https://github.com/mavdol/capsule/issues"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    ".npmignore",
+    ".gitignore",
+    "package.json"
+  ],
+  "dependencies": {
+    "@capsule-run/adapter": "^0.1.1",
+    "@elizaos/core": "1.7.2"
+  },
+  "devDependencies": {
+    "@elizaos/cli": "1.7.2",
+    "dotenv": "^17.2.3",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "start": "elizaos start",
+    "dev": "elizaos dev",
+    "build": "bun run build.ts",
+    "build:watch": "bun run build.ts --watch",
+    "test": "bun test",
+    "format": "prettier --write ./src"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "gitHead": "d5bd5c43bfebeb7ac02f9e029f924cb6cd5c2ec7"
+}
