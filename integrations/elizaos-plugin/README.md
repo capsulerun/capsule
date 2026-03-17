@@ -1,4 +1,4 @@
-# `Capsule` ElizaOS Plugin
+# `Capsule` Experimental ElizaOS Plugin
 
 [![@capsule-run/elizaos-plugin Release](https://github.com/mavdol/capsule/actions/workflows/elizaos-plugin-release.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/elizaos-plugin-release.yml)
 
