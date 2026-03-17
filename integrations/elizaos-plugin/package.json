@@ -1,7 +1,7 @@
 {
   "name": "@capsule-run/elizaos-plugin",
   "description": "Capsule code execution plugin for ElizaOS - Run Python and JavaScript code securely",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",

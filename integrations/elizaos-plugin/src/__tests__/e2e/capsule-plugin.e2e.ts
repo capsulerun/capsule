@@ -33,19 +33,35 @@ export const CapsulePluginTestSuite: TestSuite = {
       },
     },
     {
-      name: 'execute_code_action_should_be_registered',
+      name: 'python_action_should_be_registered',
       fn: async (runtime: IAgentRuntime) => {
-        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_CODE');
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_PYTHON');
 
         if (!action) {
-          throw new Error('EXECUTE_CODE action is not registered');
+          throw new Error('EXECUTE_PYTHON action is not registered');
         }
 
         if (!action.handler || typeof action.handler !== 'function') {
-          throw new Error('EXECUTE_CODE handler is not a function');
+          throw new Error('EXECUTE_PYTHON handler is not a function');
         }
 
-        logger.info('✓ EXECUTE_CODE action registered correctly');
+        logger.info('✓ EXECUTE_PYTHON action registered correctly');
+      },
+    },
+    {
+      name: 'javascript_action_should_be_registered',
+      fn: async (runtime: IAgentRuntime) => {
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_JAVASCRIPT');
+
+        if (!action) {
+          throw new Error('EXECUTE_JAVASCRIPT action is not registered');
+        }
+
+        if (!action.handler || typeof action.handler !== 'function') {
+          throw new Error('EXECUTE_JAVASCRIPT handler is not a function');
+        }
+
+        logger.info('✓ EXECUTE_JAVASCRIPT action registered correctly');
       },
     },
     {
@@ -58,7 +74,7 @@ export const CapsulePluginTestSuite: TestSuite = {
           entityId: 'test-user' as UUID,
           roomId: 'python-test-room' as UUID,
           content: {
-            text: 'Run this Python code:\n```python\nx = 10 + 5\nx\n```',
+            text: 'x = 10 + 5\nx',
           } as Content,
           createdAt: Date.now(),
         };
@@ -81,9 +97,9 @@ export const CapsulePluginTestSuite: TestSuite = {
           return [responseMemory];
         };
 
-        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_CODE');
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_PYTHON');
         if (!action) {
-          throw new Error('EXECUTE_CODE action not found');
+          throw new Error('EXECUTE_PYTHON action not found');
         }
 
         const result = await action.handler(runtime, testMessage, undefined, {}, callback);
@@ -100,6 +116,18 @@ export const CapsulePluginTestSuite: TestSuite = {
           throw new Error(`Expected result to contain '15', got: ${responseText}`);
         }
 
+        if (!result.data?.code) {
+          throw new Error('Expected result.data.code to be present');
+        }
+
+        if (result.data.code !== testMessage.content.text) {
+          throw new Error(`Expected code to match input: ${result.data.code}`);
+        }
+
+        if (result.data.language !== 'Python') {
+          throw new Error(`Expected language to be 'Python', got: ${result.data.language}`);
+        }
+
         logger.info(`✓ Python code executed successfully: "${responseText}"`);
       },
     },
@@ -113,7 +141,7 @@ export const CapsulePluginTestSuite: TestSuite = {
           entityId: 'test-user' as UUID,
           roomId: 'js-test-room' as UUID,
           content: {
-            text: 'Run this JavaScript:\n```javascript\nconst x = 20 * 2;\nx\n```',
+            text: 'const x = 20 * 2;\nx',
           } as Content,
           createdAt: Date.now(),
         };
@@ -136,9 +164,9 @@ export const CapsulePluginTestSuite: TestSuite = {
           return [responseMemory];
         };
 
-        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_CODE');
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_JAVASCRIPT');
         if (!action) {
-          throw new Error('EXECUTE_CODE action not found');
+          throw new Error('EXECUTE_JAVASCRIPT action not found');
         }
 
         const result = await action.handler(runtime, testMessage, undefined, {}, callback);
@@ -155,6 +183,18 @@ export const CapsulePluginTestSuite: TestSuite = {
           throw new Error(`Expected result to contain '40', got: ${responseText}`);
         }
 
+        if (!result.data?.code) {
+          throw new Error('Expected result.data.code to be present');
+        }
+
+        if (result.data.code !== testMessage.content.text) {
+          throw new Error(`Expected code to match input: ${result.data.code}`);
+        }
+
+        if (result.data.language !== 'JavaScript') {
+          throw new Error(`Expected language to be 'JavaScript', got: ${result.data.language}`);
+        }
+
         logger.info(`✓ JavaScript code executed successfully: "${responseText}"`);
       },
     },
@@ -168,7 +208,7 @@ export const CapsulePluginTestSuite: TestSuite = {
           entityId: 'test-user' as UUID,
           roomId: 'python-print-room' as UUID,
           content: {
-            text: '```python\nprint("Hello")\nprint("World")\n```',
+            text: 'print("Hello")\nprint("World")',
           } as Content,
           createdAt: Date.now(),
         };
@@ -180,9 +220,9 @@ export const CapsulePluginTestSuite: TestSuite = {
           return [];
         };
 
-        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_CODE');
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_PYTHON');
         if (!action) {
-          throw new Error('EXECUTE_CODE action not found');
+          throw new Error('EXECUTE_PYTHON action not found');
         }
 
         const result = await action.handler(runtime, testMessage, undefined, {}, callback);
@@ -208,7 +248,7 @@ export const CapsulePluginTestSuite: TestSuite = {
           entityId: 'test-user' as UUID,
           roomId: 'js-console-room' as UUID,
           content: {
-            text: '```javascript\nconsole.log("Testing");\n42\n```',
+            text: 'console.log("Testing");\n42',
           } as Content,
           createdAt: Date.now(),
         };
@@ -220,9 +260,9 @@ export const CapsulePluginTestSuite: TestSuite = {
           return [];
         };
 
-        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_CODE');
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_JAVASCRIPT');
         if (!action) {
-          throw new Error('EXECUTE_CODE action not found');
+          throw new Error('EXECUTE_JAVASCRIPT action not found');
         }
 
         const result = await action.handler(runtime, testMessage, undefined, {}, callback);
@@ -239,36 +279,85 @@ export const CapsulePluginTestSuite: TestSuite = {
       },
     },
     {
-      name: 'should_return_error_for_missing_code_block',
+      name: 'should_execute_plain_python_code',
       fn: async (runtime: IAgentRuntime) => {
         const testMessage = {
-          id: 'error-test-1' as UUID,
+          id: 'plain-python-test' as UUID,
           userId: 'test-user' as UUID,
           agentId: runtime.agentId,
           entityId: 'test-user' as UUID,
-          roomId: 'error-test-room' as UUID,
+          roomId: 'plain-python-room' as UUID,
           content: {
-            text: 'Just some text without code blocks',
+            text: 'result = 5 * 10\nresult',
           } as Content,
           createdAt: Date.now(),
         };
 
-        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_CODE');
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_PYTHON');
         if (!action) {
-          throw new Error('EXECUTE_CODE action not found');
+          throw new Error('EXECUTE_PYTHON action not found');
         }
 
         const result = await action.handler(runtime, testMessage, undefined, {});
 
-        if (result?.success) {
-          throw new Error('Expected action to fail with missing code block');
+        if (!result?.success) {
+          throw new Error('Expected Python action to execute plain code successfully');
         }
 
-        if (!result?.error || !(result.error as Error)?.message?.includes('code block')) {
-          throw new Error('Expected error message about missing code block');
+        if (!result?.text?.includes('50')) {
+          throw new Error(`Expected result to contain '50', got: ${result?.text}`);
         }
 
-        logger.info('✓ Error handling works correctly for missing code blocks');
+        if (!result.data?.code) {
+          throw new Error('Expected result.data.code to be present');
+        }
+
+        if (result.data.code !== testMessage.content.text) {
+          throw new Error(`Expected code to match input: ${result.data.code}`);
+        }
+
+        logger.info('✓ Python action executes plain code successfully');
+      },
+    },
+    {
+      name: 'should_execute_plain_javascript_code',
+      fn: async (runtime: IAgentRuntime) => {
+        const testMessage = {
+          id: 'plain-js-test' as UUID,
+          userId: 'test-user' as UUID,
+          agentId: runtime.agentId,
+          entityId: 'test-user' as UUID,
+          roomId: 'plain-js-room' as UUID,
+          content: {
+            text: 'const result = 5 * 10;\nresult',
+          } as Content,
+          createdAt: Date.now(),
+        };
+
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_JAVASCRIPT');
+        if (!action) {
+          throw new Error('EXECUTE_JAVASCRIPT action not found');
+        }
+
+        const result = await action.handler(runtime, testMessage, undefined, {});
+
+        if (!result?.success) {
+          throw new Error('Expected JavaScript action to execute plain code successfully');
+        }
+
+        if (!result?.text?.includes('50')) {
+          throw new Error(`Expected result to contain '50', got: ${result?.text}`);
+        }
+
+        if (!result.data?.code) {
+          throw new Error('Expected result.data.code to be present');
+        }
+
+        if (result.data.code !== testMessage.content.text) {
+          throw new Error(`Expected code to match input: ${result.data.code}`);
+        }
+
+        logger.info('✓ JavaScript action executes plain code successfully');
       },
     },
     {
@@ -281,14 +370,14 @@ export const CapsulePluginTestSuite: TestSuite = {
           entityId: 'test-user' as UUID,
           roomId: 'syntax-error-room' as UUID,
           content: {
-            text: '```python\nthis is invalid python syntax!@#\n```',
+            text: 'this is invalid python syntax!@#',
           } as Content,
           createdAt: Date.now(),
         };
 
-        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_CODE');
+        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_PYTHON');
         if (!action) {
-          throw new Error('EXECUTE_CODE action not found');
+          throw new Error('EXECUTE_PYTHON action not found');
         }
 
         const result = await action.handler(runtime, testMessage, undefined, {});
@@ -307,9 +396,15 @@ export const CapsulePluginTestSuite: TestSuite = {
     {
       name: 'validate_should_always_return_true',
       fn: async (runtime: IAgentRuntime) => {
-        const action = runtime.actions.find((a: Action) => a.name === 'EXECUTE_CODE');
-        if (!action) {
-          throw new Error('EXECUTE_CODE action not found');
+        const pythonAction = runtime.actions.find((a: Action) => a.name === 'EXECUTE_PYTHON');
+        const jsAction = runtime.actions.find((a: Action) => a.name === 'EXECUTE_JAVASCRIPT');
+
+        if (!pythonAction) {
+          throw new Error('EXECUTE_PYTHON action not found');
+        }
+
+        if (!jsAction) {
+          throw new Error('EXECUTE_JAVASCRIPT action not found');
         }
 
         const testMessage = {
@@ -324,12 +419,17 @@ export const CapsulePluginTestSuite: TestSuite = {
           createdAt: Date.now(),
         };
 
-
-        if (action.validate) {
-          console.log("validate", action.validate);
-          const isValid = await action.validate(runtime, testMessage, undefined);
+        if (pythonAction.validate) {
+          const isValid = await pythonAction.validate(runtime, testMessage, undefined);
           if (!isValid) {
-            throw new Error('Validate should always return true');
+            throw new Error('Python validate should always return true');
+          }
+        }
+
+        if (jsAction.validate) {
+          const isValid = await jsAction.validate(runtime, testMessage, undefined);
+          if (!isValid) {
+            throw new Error('JavaScript validate should always return true');
           }
         }
 
