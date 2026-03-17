@@ -1,3 +1,4 @@
 examples/* linguist-documentation
 integrations/* linguist-vendored
+integrations/readme.md -linguist-vendored
 assets/* linguist-vendored
