@@ -40,8 +40,11 @@ def execute_code(code: str):
     return result
 
 @task(name="main", compute="HIGH")
-def main(code: str):
-    response = execute_code(code)
+def main(action: str, code: str):
+    response = { "success": False, "result": None, "error": { "message": "Invalid action" } }
+
+    if action == "EXECUTE_CODE":
+        response = execute_code(code)
 
     if isinstance(response, dict):
         if not response.get("success"):

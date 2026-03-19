@@ -41,8 +41,18 @@ export const executeCode = task(
 
 export const main = task(
   { name: "main", compute: "HIGH"},
-  async (code: string): Promise<any> => {
-    const response = await executeCode(code);
+  async (action: string, code: string): Promise<any> => {
+
+    let response: any = {
+      success: false,
+      result: null,
+      error: { message: "Invalid action" }
+    };
+
+    if(action == "EXECUTE_CODE") {
+      response = await executeCode(code);
+    }
+
     if(!response.success && response.error) {
       throw new Error(response.error.message);
     }
