@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "capsule-run>=0.6.5",
+    "capsule-run>=0.7.0",
 ]
 
 [project.urls]
