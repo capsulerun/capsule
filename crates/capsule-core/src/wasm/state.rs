@@ -177,7 +177,13 @@ impl Host for State {
         headers: Vec<(String, String)>,
         body: Option<String>,
     ) -> Result<HttpResponse, HttpError> {
-        let allowed = is_host_allowed(&url, &self.policy.allowed_hosts);
+        let host = url
+            .parse::<reqwest::Url>()
+            .ok()
+            .and_then(|u| u.host_str().map(|h| h.to_string()))
+            .unwrap_or("unknown".to_string());
+
+        let allowed = is_host_allowed(&host, &self.policy.allowed_hosts);
 
         if !allowed {
             return Err(HttpError::InvalidUrl("Host not allowed".to_string()));
