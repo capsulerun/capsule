@@ -178,20 +178,6 @@ default_timeout = "30s"
 
 Task-level options always override these defaults.
 
-### HTTP Client
-
-Standard `requests` library isn't compatible with WASM. Use Capsule's HTTP client:
-
-```python
-from capsule import task
-from capsule.http import get, post
-
-@task(name="fetch", compute="MEDIUM", timeout="30s")
-def main() -> dict:
-    response = get("https://api.example.com/data")
-    return {"status": response.status_code, "ok": response.ok()}
-```
-
 ### File Access
 
 Tasks can read and write files within directories specified in `allowed_files`. Any attempt to access files outside these directories is not possible.
@@ -217,12 +203,13 @@ Tasks can make HTTP requests to domains specified in `allowed_hosts`. By default
 
 ```python
 from capsule import task
-from capsule.http import get
+from urllib.request import urlopen
+import json
 
 @task(name="main", allowed_hosts=["api.openai.com", "*.anthropic.com"])
 def main() -> dict:
-    response = get("https://api.openai.com/v1/models")
-    return response.json()
+    with urlopen("https://api.openai.com/v1/models") as response:
+        return json.loads(response.read().decode("utf-8"))
 ```
 
 ### Environment Variables
