@@ -11,16 +11,20 @@ pub fn extract_python_task_configs(source: &str) -> Option<HashMap<String, serde
     };
 
     for stmt in body {
-        if let ast::Stmt::FunctionDef(func) = stmt {
-            for decorator in &func.decorator_list {
-                if let Some(config) = extract_task_decorator(decorator, func.name.as_ref()) {
-                    let task_name = config
-                        .get("name")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or(func.name.as_ref())
-                        .to_string();
-                    tasks.insert(task_name, serde_json::to_value(&config).ok()?);
-                }
+        let (name, decorators) = match &stmt {
+            ast::Stmt::FunctionDef(f) => (f.name.as_ref(), &f.decorator_list),
+            ast::Stmt::AsyncFunctionDef(f) => (f.name.as_ref(), &f.decorator_list),
+            _ => continue,
+        };
+
+        for decorator in decorators {
+            if let Some(config) = extract_task_decorator(decorator, name) {
+                let task_name = config
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(name)
+                    .to_string();
+                tasks.insert(task_name, serde_json::to_value(&config).ok()?);
             }
         }
     }
@@ -130,6 +134,20 @@ def main():
 "#;
         let configs = extract_python_task_configs(source).unwrap();
         assert!(configs.contains_key("main"));
+    }
+
+    #[test]
+    fn test_async_task() {
+        let source = r#"
+@task(name="fetch", compute="HIGH", timeout="30s")
+async def fetch():
+    pass
+"#;
+        let configs = extract_python_task_configs(source).unwrap();
+        assert!(configs.contains_key("fetch"));
+        let config = &configs["fetch"];
+        assert_eq!(config["compute"], "HIGH");
+        assert_eq!(config["timeout"], "30s");
     }
 
     #[test]

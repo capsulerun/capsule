@@ -242,4 +242,16 @@ const myTask = task({ compute: "LOW" }, () => {
         assert!(configs.contains_key("myTask"));
         assert_eq!(configs["myTask"]["name"], "myTask");
     }
+
+    #[test]
+    fn test_async_task_uses_variable() {
+        let source = r#"
+const asyncTask = task({ name: "asyncTask", compute: "LOW" }, async () => {
+    return "hello";
+});
+"#;
+        let configs = extract_js_task_configs(source, false).unwrap();
+        assert!(configs.contains_key("asyncTask"));
+        assert_eq!(configs["asyncTask"]["compute"], "LOW");
+    }
 }

@@ -142,16 +142,11 @@ impl PythonWasmCompiler {
             )));
         }
 
-        if !sdk_path.exists() {
-            return Err(PythonWasmCompilerError::FsError(format!(
-                "SDK directory not found: {}",
-                sdk_path.display()
-            )));
-        }
-
         let bootloader_path = self.cache_dir.join("_capsule_boot.py");
         let bootloader_content = format!(
             r#"# Auto-generated bootloader for Capsule
+import capsule.socket
+capsule.socket._install()
 import {module_name}
 import capsule.app
 capsule.app._main_module = {module_name}
@@ -168,8 +163,8 @@ from capsule.app import TaskRunner, exports
         let sdk_path_normalized = Self::normalize_path(&sdk_path);
         let output_wasm_normalized = Self::normalize_path(&self.output_wasm);
 
-        let output = Command::new("componentize-py")
-            .arg("-d")
+        let mut cmd = Command::new("componentize-py");
+        cmd.arg("-d")
             .arg(&wit_path_normalized)
             .arg("-w")
             .arg("capsule-agent")
@@ -182,10 +177,9 @@ from capsule.app import TaskRunner, exports
             .arg("-p")
             .arg(&sdk_path_normalized)
             .arg("-o")
-            .arg(&output_wasm_normalized)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()?;
+            .arg(&output_wasm_normalized);
+
+        let output = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).output()?;
 
         if !output.status.success() {
             return Err(PythonWasmCompilerError::CompileFailed(format!(

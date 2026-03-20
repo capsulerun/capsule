@@ -5,7 +5,39 @@ This module implements the `capsule:host/task-runner` export interface
 that the Wasm component provide.
 """
 
+import asyncio
+import inspect
 import json
+
+
+class _WasmEventLoop(asyncio.SelectorEventLoop):
+    """
+    Minimal event loop for WASM that skips OS-level self-pipe setup.
+
+    The self-pipe is only used for thread wakeups and signal handling,
+    neither of which exist in a WASM sandbox.
+    """
+
+    def _make_self_pipe(self):
+        self._ssock = None
+        self._csock = None
+        self._internal_fds += 1
+
+    def _close_self_pipe(self):
+        if self._ssock is not None:
+            self._remove_reader(self._ssock.fileno())
+            self._ssock.close()
+            self._ssock = None
+        if self._csock is not None:
+            self._csock.close()
+            self._csock = None
+        self._internal_fds -= 1
+
+    def _write_to_self(self):
+        pass
+
+    def _read_from_self(self):
+        pass
 
 _TASKS = {}
 _main_module = None
@@ -85,7 +117,14 @@ class TaskRunner:
                     "error": f"No tasks or main() function found. Available tasks: {list(_TASKS.keys())}"
                 })
 
-            result = task_func(*args, **kwargs)
+            if inspect.iscoroutinefunction(task_func):
+                loop = _WasmEventLoop()
+                try:
+                    result = loop.run_until_complete(task_func(*args, **kwargs))
+                finally:
+                    loop.close()
+            else:
+                result = task_func(*args, **kwargs)
 
             return json.dumps({"result": result})
 
