@@ -11,9 +11,9 @@ _SANDBOXES_DIR = Path(__file__).parent / "sandboxes"
 _SANDBOX_PY = str(_SANDBOXES_DIR / "python_sandbox.wasm")
 _SANDBOX_JS = str(_SANDBOXES_DIR / "js_sandbox.wasm")
 
-async def _invoke_sandbox(wasm_file: str, code: str) -> str:
+async def _invoke_sandbox(wasm_file: str, action: str, code: str) -> str:
     """Execute code in a Capsule sandbox and return the result."""
-    res = await run(file=wasm_file, args=[code])
+    res = await run(file=wasm_file, args=[action, code])
 
     if not res.get("success"):
         error = res.get("error", {})
@@ -30,12 +30,12 @@ async def _invoke_sandbox(wasm_file: str, code: str) -> str:
 
 async def load_javascript_sandbox() -> None:
     """Preload the JavaScript sandbox to reduce cold start time."""
-    await _invoke_sandbox(_SANDBOX_JS, "// pre-load sandbox")
+    await _invoke_sandbox(_SANDBOX_JS, "EXECUTE_CODE", "// pre-load sandbox")
 
 
 async def load_python_sandbox() -> None:
     """Preload the Python sandbox to reduce cold start time."""
-    await _invoke_sandbox(_SANDBOX_PY, "# pre-load sandbox")
+    await _invoke_sandbox(_SANDBOX_PY, "EXECUTE_CODE", "# pre-load sandbox")
 
 
 async def load_sandboxes() -> None:
@@ -50,11 +50,11 @@ async def run_python(code: str) -> str:
     """
     Execute Python code in an isolated Capsule sandbox.
     """
-    return await _invoke_sandbox(_SANDBOX_PY, code)
+    return await _invoke_sandbox(_SANDBOX_PY, "EXECUTE_CODE", code)
 
 
 async def run_javascript(code: str) -> str:
     """
     Execute JavaScript code in an isolated Capsule sandbox
     """
-    return await _invoke_sandbox(_SANDBOX_JS, code)
+    return await _invoke_sandbox(_SANDBOX_JS, "EXECUTE_CODE", code)

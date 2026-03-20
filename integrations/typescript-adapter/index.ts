@@ -4,8 +4,8 @@ import { join } from "path";
 const SANDBOX_PY = join(import.meta.dirname, "sandboxes", "python_sandbox.wasm");
 const SANDBOX_JS = join(import.meta.dirname, "sandboxes", "js_sandbox.wasm");
 
-async function invokeSandbox(wasmFile: string, code: string): Promise<string> {
-  const res = await run({ file: wasmFile, args: [code] });
+async function invokeSandbox(wasmFile: string, action: string, code: string): Promise<string> {
+  const res = await run({ file: wasmFile, args: [action, code] });
 
   if (!res.success) {
     throw new Error(res.error?.message ?? "Capsule execution failed");
@@ -17,11 +17,11 @@ async function invokeSandbox(wasmFile: string, code: string): Promise<string> {
 }
 
 export async function loadJavaScriptSandbox(): Promise<void> {
-  await invokeSandbox(SANDBOX_JS, "// pre-load sandbox");
+  await invokeSandbox(SANDBOX_JS, "EXECUTE_CODE", "// pre-load sandbox");
 }
 
 export async function loadPythonSandbox(): Promise<void> {
-  await invokeSandbox(SANDBOX_PY, "# pre-load sandbox");
+  await invokeSandbox(SANDBOX_PY, "EXECUTE_CODE", "# pre-load sandbox");
 }
 
 export async function loadSandboxes(): Promise<void> {
@@ -32,9 +32,9 @@ export async function loadSandboxes(): Promise<void> {
 }
 
 export async function runPython(code: string): Promise<string> {
-  return await invokeSandbox(SANDBOX_PY, code);
+  return await invokeSandbox(SANDBOX_PY, "EXECUTE_CODE", code);
 }
 
 export async function runJavaScript(code: string): Promise<string> {
-  return await invokeSandbox(SANDBOX_JS, code);
+  return await invokeSandbox(SANDBOX_JS, "EXECUTE_CODE", code);
 }
