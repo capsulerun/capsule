@@ -8,6 +8,13 @@
 import { registerTask, type TaskConfig } from "./app.js";
 import { isWasmMode, callHost } from "./hostApi.js";
 
+export interface AllowedFile {
+  /** Path to the directory, e.g., "./data" */
+  path: string;
+  /** Access mode: "read-only" / "ro" or "read-write" / "rw" (default) */
+  mode?: "read-only" | "read-write" | "ro" | "rw";
+}
+
 export interface TaskOptions {
   /** Task name (required) */
   name: string;
@@ -23,8 +30,8 @@ export interface TaskOptions {
   timeout?: string | number;
   /** Maximum number of retries */
   maxRetries?: number;
-  /** Files/folders accessible in the sandbox, e.g., ["./data"] */
-  allowedFiles?: string[];
+  /** Files/folders accessible in the sandbox, e.g., ["./data"] or [{ path: "./data", mode: "ro" }] */
+  allowedFiles?: (string | AllowedFile)[];
   /** Allowed hosts for HTTP requests */
   allowedHosts?: string[];
   /** Environment variables available from your .env file for the task */
@@ -96,6 +103,24 @@ function normalizeTimeout(timeout?: string | number): string | undefined {
   return timeout;
 }
 
+function normalizeAllowedFile(entry: string | AllowedFile): string {
+  if (typeof entry === "string") return entry;
+  switch (entry.mode) {
+    case undefined:
+    case "rw":
+    case "read-write":
+      return entry.path;
+    case "ro":
+    case "read-only":
+      return `${entry.path}:ro`;
+    default:
+      throw new Error(
+        `Invalid allowed_files mode '${(entry as any).mode}' for path '${entry.path}'. ` +
+        `Use 'read-only' or 'read-write'.`
+      );
+  }
+}
+
 export function task<TArgs extends any[], TReturn>(
   options: TaskOptions,
   fn: (...args: TArgs) => TReturn
@@ -110,7 +135,7 @@ export function task<TArgs extends any[], TReturn>(
     ram: options.ram,
     timeout: normalizeTimeout(options.timeout),
     maxRetries: options.maxRetries,
-    allowedFiles: options.allowedFiles,
+    allowedFiles: options.allowedFiles?.map(normalizeAllowedFile),
     allowedHosts,
     envVariables: options.envVariables,
   };

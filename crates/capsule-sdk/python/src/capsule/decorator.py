@@ -10,6 +10,21 @@ from .host_api import call_host, is_wasm_mode
 from . import app
 
 
+def _normalize_allowed_file(entry):
+    if isinstance(entry, str):
+        return entry
+    path = entry.get("path", "")
+    mode = entry.get("mode")
+    if mode is None or mode in ("rw", "read-write"):
+        return path
+    if mode in ("ro", "read-only"):
+        return f"{path}:ro"
+    raise ValueError(
+        f"Invalid allowed_files mode '{mode}' for path '{path}'. "
+        f"Use 'read-only' or 'read-write'."
+    )
+
+
 def task(name=None, compute="MEDIUM", ram=None, timeout=None, max_retries=None, allowed_files=None, allowed_hosts=["*"], env_variables=None):
     """
     Decorator to mark a function as a Capsule task.
@@ -47,7 +62,7 @@ def task(name=None, compute="MEDIUM", ram=None, timeout=None, max_retries=None, 
         if max_retries is not None:
             task_config["max_retries"] = max_retries
         if allowed_files is not None:
-            task_config["allowed_files"] = allowed_files
+            task_config["allowed_files"] = [_normalize_allowed_file(f) for f in allowed_files]
         if allowed_hosts is not None:
             task_config["allowed_hosts"] = allowed_hosts
         if env_variables is not None:

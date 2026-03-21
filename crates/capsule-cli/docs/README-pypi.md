@@ -149,7 +149,7 @@ Every task returns a structured JSON envelope containing both the result and exe
 | `ram` | Memory limit | `str` | unlimited | `"512MB"`, `"2GB"` |
 | `timeout` | Maximum execution time | `str` | unlimited | `"30s"`, `"5m"` |
 | `max_retries` | Retry attempts on failure | `int` | `0` | `3` |
-| `allowed_files` | Folders accessible in the sandbox | `list` | `[]` | `["./data", "./output"]` |
+| `allowed_files` | Folders accessible in the sandbox (with optional access mode) | `list` | `[]` | `["./data"]`, `[{"path": "./data", "mode": "ro"}]` |
 | `allowed_hosts` | Domains accessible in the sandbox | `list` | `["*"]` | `["api.openai.com", "*.anthropic.com"]` |
 | `env_variables` | Environment variables accessible in the sandbox | `list` | `[]` | `["API_KEY"]` |
 
@@ -182,18 +182,26 @@ Task-level options always override these defaults.
 
 Tasks can read and write files within directories specified in `allowed_files`. Any attempt to access files outside these directories is not possible.
 
+> `allowed_files` supports directory paths only, not individual files.
+
+Each entry can be a plain path (read-write by default) or a dict with an explicit `mode`: `"read-only"` (or `"ro"`) or `"read-write"` (or `"rw"`).
+
 ```python
 from capsule import task
 
-@task(name="restricted_writer", allowed_files=["./output"])
-def restricted_writer() -> None:
-    with open("./output/result.txt", "w") as f:
-        f.write("result")
-
-@task(name="main")
+@task(name="main", allowed_files=[
+    {"path": "./data", "mode": "read-only"},
+    {"path": "./output", "mode": "read-write"},
+])
 def main() -> str:
-    restricted_writer()
+    with open("./data/input.txt") as f:
+        content = f.read()
+    with open("./output/result.txt", "w") as f:
+        f.write(content)
+    return content
 ```
+
+Plain strings are still accepted: `allowed_files=["./output"]` defaults to read-write.
 
 ### Network Access
 

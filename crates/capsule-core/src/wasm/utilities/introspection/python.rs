@@ -82,6 +82,18 @@ fn extract_call_args(
     Some(config)
 }
 
+fn normalize_file_entry(
+    map: &std::collections::HashMap<String, serde_json::Value>,
+) -> Option<serde_json::Value> {
+    let path = map.get("path")?.as_str()?.to_string();
+    let mode = map.get("mode").and_then(|v| v.as_str()).unwrap_or("");
+    let normalized = match mode {
+        "ro" | "read-only" => format!("{}:ro", path),
+        _ => path,
+    };
+    Some(serde_json::Value::String(normalized))
+}
+
 fn extract_literal(expr: &ast::Expr) -> Option<serde_json::Value> {
     match expr {
         ast::Expr::Constant(c) => match &c.value {
@@ -102,6 +114,19 @@ fn extract_literal(expr: &ast::Expr) -> Option<serde_json::Value> {
                 list.elts.iter().map(extract_literal).collect();
 
             items.map(serde_json::Value::Array)
+        }
+        ast::Expr::Dict(dict) => {
+            let mut map = HashMap::new();
+            for (key, value) in dict.keys.iter().zip(dict.values.iter()) {
+                if let Some(key_expr) = key
+                    && let ast::Expr::Constant(k) = key_expr
+                    && let ast::Constant::Str(key_str) = &k.value
+                    && let Some(val) = extract_literal(value)
+                {
+                    map.insert(key_str.to_string(), val);
+                }
+            }
+            normalize_file_entry(&map)
         }
         _ => None,
     }
@@ -158,5 +183,33 @@ def main():
 "#;
         let configs = extract_python_task_configs(source);
         assert!(configs.is_none());
+    }
+
+    #[test]
+    fn test_allowed_files_plain_strings() {
+        let source = r#"
+@task(name="main", allowed_files=["./data", "./output"])
+def main():
+    pass
+"#;
+        let configs = extract_python_task_configs(source).unwrap();
+        assert_eq!(
+            configs["main"]["allowed_files"],
+            serde_json::json!(["./data", "./output"])
+        );
+    }
+
+    #[test]
+    fn test_allowed_files_structured_read_only() {
+        let source = r#"
+@task(name="main", allowed_files=[{"path": "./data", "mode": "read-only"}, {"path": "./output", "mode": "read-write"}])
+def main():
+    pass
+"#;
+        let configs = extract_python_task_configs(source).unwrap();
+        assert_eq!(
+            configs["main"]["allowed_files"],
+            serde_json::json!(["./data:ro", "./output"])
+        );
     }
 }

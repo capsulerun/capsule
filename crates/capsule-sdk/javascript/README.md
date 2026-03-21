@@ -173,7 +173,7 @@ Every task returns a structured JSON envelope containing both the result and exe
 | `ram` | Memory limit | `string` | unlimited | `"512MB"`, `"2GB"` |
 | `timeout` | Maximum execution time | `string` or `number` | unlimited | `"30s"`, `"5m"` |
 | `maxRetries` | Retry attempts on failure | `number` | `0` | `3` |
-| `allowedFiles` | Folders accessible in the sandbox | `string[]` | `[]` | `["./data", "./output"]` |
+| `allowedFiles` | Folders accessible in the sandbox (with optional access mode) | `(string \| AllowedFile)[]` | `[]` | `["./data"]`, `[{ path: "./data", mode: "ro" }]` |
 | `allowedHosts` | Domains accessible in the sandbox | `string[]` | `["*"]` | `["api.openai.com", "*.anthropic.com"]` |
 | `envVariables` | Environment variables accessible in the sandbox | `string[]` | `[]` | `["API_KEY"]` |
 
@@ -206,24 +206,30 @@ Task-level options always override these defaults.
 
 Tasks can read and write files within directories specified in `allowedFiles`. Any attempt to access files outside these directories is not possible.
 
+> `allowedFiles` supports directory paths only, not individual files.
+
+Each entry can be a plain path (read-write by default) or an `AllowedFile` object with an explicit `mode`: `"read-only"` (or `"ro"`) or `"read-write"` (or `"rw"`).
+
 Common Node.js built-ins are available. Use the standard `fs` module:
 
 ```typescript
 import { task } from "@capsule-run/sdk";
 import fs from "fs/promises";
 
-export const restrictedWriter = task({
-    name: "restricted_writer",
-    allowedFiles: ["./output"]
+export const main = task({
+    name: "main",
+    allowedFiles: [
+        { path: "./data", mode: "read-only" },
+        { path: "./output", mode: "read-write" },
+    ]
 }, async () => {
-    await fs.writeFile("./output/result.txt", "result");
-});
-
-export const main = task({ name: "main", allowedFiles: ["./data"] }, async () => {
-    await restrictedWriter();
-    return await fs.readFile("./data/input.txt", "utf8");
+    const content = await fs.readFile("./data/input.txt", "utf8");
+    await fs.writeFile("./output/result.txt", content);
+    return content;
 });
 ```
+
+Plain strings are still accepted: `allowedFiles: ["./output"]` defaults to read-write.
 
 ### Network Access
 

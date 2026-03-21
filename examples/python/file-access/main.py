@@ -1,6 +1,6 @@
 from capsule import task
 
-@task(name="restricted_writer", allowed_files=["./data"])
+@task(name="restricted_writer", allowed_files=[{"path": "./data", "mode": "read-write"}])
 def restricted_writer(content: str) -> dict:
     """Sub-task with restricted file access.
     When called, it can ONLY access files in ./data directory
@@ -10,7 +10,7 @@ def restricted_writer(content: str) -> dict:
     return {"written": True}
 
 
-@task(name="main")
+@task(name="main", allowed_files=[{"path": "./data", "mode": "read-only"}])
 def main() -> dict:
     """Main task has full project access by default."""
 

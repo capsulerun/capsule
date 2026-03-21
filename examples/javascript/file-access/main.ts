@@ -7,7 +7,10 @@ import fs from "fs/promises";
  */
 export const restrictedWriter = task({
     name: "restricted_writer",
-    allowedFiles: ["./data"]
+    allowedFiles: [{
+        path: "./data",
+        mode: "read-only"
+    }]
 }, async (content: string) => {
     await fs.writeFile("./data/output.txt", content);
     return { written: true };
@@ -16,7 +19,10 @@ export const restrictedWriter = task({
 /**
  * Main task has full project access by default.
  */
-export const main = task({ name: "main", allowedFiles: ["./data"] }, async () => {
+export const main = task({ name: "main", allowedFiles: [{
+    path: "./data",
+    mode: "read-only"
+}] }, async () => {
     const content = await fs.readFile("./data/input.txt", "utf8") as string;
     const lines = content.trim().split("\n");
     const lineCount = lines.length;

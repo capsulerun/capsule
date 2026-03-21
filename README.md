@@ -199,7 +199,7 @@ Configure your tasks with these parameters:
 | `ram` | Memory limit for the task | `str` | unlimited | `"512MB"`, `"2GB"` |
 | `timeout` | Maximum execution time | `str` | unlimited | `"30s"`, `"5m"`, `"1h"` |
 | `max_retries` / `maxRetries` | Number of retry attempts on failure | `int` | `0` | `3` |
-| `allowed_files` / `allowedFiles` | Folders accessible in the sandbox | `list` | `[]` | `["./data", "./output"]` |
+| `allowed_files` / `allowedFiles` | Folders accessible in the sandbox (with optional access mode) | `list` | `[]` | `["./data"]`, `[{"path": "./data", "mode": "ro"}]` |
 | `allowed_hosts` / `allowedHosts` | Domains accessible in the sandbox | `list` | `["*"]` | `["api.openai.com", "*.anthropic.com"]` |
 | `env_variables` / `envVariables` | Environment variables accessible in the sandbox | `list` | `[]` | `["API_KEY"]` |
 
@@ -274,7 +274,11 @@ export const main = task({
 Tasks can read and write files within directories specified in `allowed_files`. Any attempt to access files outside these directories is not possible.
 
 > [!NOTE]
-> Currently, `allowed_files` supports directory paths, not individual files.
+> `allowed_files` supports directory paths only, not individual files.
+
+Each entry can be a plain path (read-write by default) or a structured object with an explicit `mode`:
+- `"read-only"` (or `"ro"`)
+- `"read-write"` (or `"rw"`)
 
 #### Python
 
@@ -283,15 +287,19 @@ Python's standard file operations work normally. Use `open()`, `os`, `pathlib`, 
 ```python
 from capsule import task
 
-@task(name="restricted_writer", allowed_files=["./output"])
-def restricted_writer() -> None:
-    with open("./output/result.txt", "w") as f:
-        f.write("result")
-
-@task(name="main")
+@task(name="main", allowed_files=[
+    {"path": "./data", "mode": "read-only"},
+    {"path": "./output", "mode": "read-write"},
+])
 def main() -> str:
-    restricted_writer()
+    with open("./data/input.txt") as f:
+        content = f.read()
+    with open("./output/result.txt", "w") as f:
+        f.write(content)
+    return content
 ```
+
+Plain strings are still accepted: `allowed_files=["./output"]` defaults to read-write.
 
 #### TypeScript / JavaScript
 
@@ -301,18 +309,20 @@ Common Node.js built-ins are available. Use the standard `fs` module:
 import { task } from "@capsule-run/sdk";
 import fs from "fs/promises";
 
-export const restrictedWriter = task({
-    name: "restricted_writer",
-    allowedFiles: ["./output"]
+export const main = task({
+    name: "main",
+    allowedFiles: [
+        { path: "./data", mode: "read-only" },
+        { path: "./output", mode: "read-write" },
+    ]
 }, async () => {
-    await fs.writeFile("./output/result.txt", "result");
-});
-
-export const main = task({ name: "main", allowedFiles: ["./data"] }, async () => {
-    await restrictedWriter();
-    return await fs.readFile("./data/input.txt", "utf8");
+    const content = await fs.readFile("./data/input.txt", "utf8");
+    await fs.writeFile("./output/result.txt", content);
+    return content;
 });
 ```
+
+Plain strings are still accepted: `allowedFiles: ["./output"]` defaults to read-write.
 
 ### Environment Variables
 
