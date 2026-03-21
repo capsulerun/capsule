@@ -143,6 +143,16 @@ fn extract_object_literal(obj: &ObjectLit) -> HashMap<String, serde_json::Value>
     config
 }
 
+fn normalize_file_entry(map: &HashMap<String, serde_json::Value>) -> Option<serde_json::Value> {
+    let path = map.get("path")?.as_str()?.to_string();
+    let mode = map.get("mode").and_then(|v| v.as_str()).unwrap_or("");
+    let normalized = match mode {
+        "ro" | "read-only" => format!("{}:ro", path),
+        _ => path,
+    };
+    Some(serde_json::Value::String(normalized))
+}
+
 fn extract_js_literal(expr: &Expr) -> Option<serde_json::Value> {
     match expr {
         Expr::Lit(lit) => match lit {
@@ -164,6 +174,7 @@ fn extract_js_literal(expr: &Expr) -> Option<serde_json::Value> {
 
             items.map(serde_json::Value::Array)
         }
+        Expr::Object(obj) => normalize_file_entry(&extract_object_literal(obj)),
         _ => None,
     }
 }
@@ -253,5 +264,23 @@ const asyncTask = task({ name: "asyncTask", compute: "LOW" }, async () => {
         let configs = extract_js_task_configs(source, false).unwrap();
         assert!(configs.contains_key("asyncTask"));
         assert_eq!(configs["asyncTask"]["compute"], "LOW");
+    }
+
+    #[test]
+    fn test_allowed_files_plain_strings() {
+        let source = r#"
+const main = task({ name: "main", allowedFiles: ["./data", "./output"] }, () => {});
+"#;
+        let configs = extract_js_task_configs(source, false).unwrap();
+        assert_eq!(configs["main"]["allowedFiles"], serde_json::json!(["./data", "./output"]));
+    }
+
+    #[test]
+    fn test_allowed_files_structured_read_only() {
+        let source = r#"
+const main = task({ name: "main", allowedFiles: [{ path: "./data", mode: "read-only" }, { path: "./output", mode: "read-write" }] }, async () => {});
+"#;
+        let configs = extract_js_task_configs(source, false).unwrap();
+        assert_eq!(configs["main"]["allowedFiles"], serde_json::json!(["./data:ro", "./output"]));
     }
 }
