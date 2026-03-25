@@ -11,6 +11,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "typescript": "^5.9.3"
+    "@capsule-run/sdk": "latest"
   }
 }
