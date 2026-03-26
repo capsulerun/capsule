@@ -438,7 +438,7 @@ Executing a `.wasm` file bypasses the compiler completely, reducing initializati
 > [!NOTE]
 > TypeScript/JavaScript has broader compatibility than Python since it doesn't rely on native bindings.
 
-**Python:** Only pure Python is supported in sandboxes (no C extensions like `numpy` or `pandas`). However, your host code using `run()` has access to the full Python ecosystem, any pip package and native extensions. (see [in-code usage](#run-from-your-code))
+**Python:** Most standard Python libraries work perfectly. Packages using C extensions require a `wasm32-wasi` compiled wheel, and many popular packages (like numpy or pandas) don't ship one yet, so they won't work inside the sandbox. However, your host code using `run()` has access to the full Python ecosystem, any pip package and native extensions. (see [in-code usage](#run-from-your-code))
 
 **TypeScript/JavaScript:** npm packages and ES modules work. Common Node.js built-ins are available. If you have any trouble with a built-in, do not hesitate to open an issue.
 
