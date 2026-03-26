@@ -241,7 +241,7 @@ def main() -> dict:
 - `json`, `math`, `re`, `datetime`, `collections`, etc.
 
 ⚠️ **Not yet supported (inside the sandbox):**
-- Packages with C extensions (e.g. `numpy`, `pandas`)
+- Packages using C extensions require a `wasm32-wasi` compiled wheel (e.g. `numpy`, `pandas`)
 
 > These limitations only apply to the task file executed in the sandbox. Your host code using `run()` has access to the full Python ecosystem, any pip package, native extensions, everything. (see [Integrate Into an Existing Project](#integrate-into-an-existing-project))
 
