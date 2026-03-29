@@ -1,10 +1,10 @@
-import ast
-import sys
+import json
 import os
-from io import StringIO
 from capsule import task
 
+from execution import _execute_code
 from serialization import _serialize_env, _deserialize_env
+
 
 @task(
     name="import_file",
@@ -39,36 +39,12 @@ def delete_file(session_id: str, path: str):
 
 @task(name="execute_code", compute="LOW", ram="256MB")
 def execute_code(code: str, env: dict = {}):
-    tree = ast.parse(code)
-    if not tree.body:
-        return None
-
-    captured = StringIO()
-    old_stdout = sys.stdout
-    sys.stdout = captured
-
-    try:
-        last = tree.body[-1]
-        if isinstance(last, ast.Expr):
-            tree.body.pop()
-            if tree.body:
-                exec(compile(tree, "<ast>", "exec"), env)
-            result = eval(compile(ast.Expression(last.value), "<ast>", "eval"), env)
-        else:
-            exec(compile(tree, "<ast>", "exec"), env)
-            result = None
-    finally:
-        sys.stdout = old_stdout
-
-    output = captured.getvalue()
-    if output:
-        return output + (str(result) if result is not None else "")
-    return result
+    return _execute_code(code, env)
 
 
 @task(
     name="execute_code_in_session",
-    compute="MEDIUM",
+    compute="LOW",
     ram="256MB",
     allowed_files=[{"path": ".capsule/sessions", "mode": "read-write"}],
 )
@@ -79,7 +55,7 @@ def execute_code_in_session(code: str, session_id: str):
         state_data = json.load(f)
     _deserialize_env(state_data, env)
 
-    result = execute_code(code, env)
+    result = _execute_code(code, env)
 
     with open(f".capsule/sessions/{session_id}_state.json", "w") as f:
         json.dump(_serialize_env(env), f)
@@ -90,16 +66,21 @@ def execute_code_in_session(code: str, session_id: str):
 @task(name="main", compute="HIGH")
 def main(action: str, *args):
     if action == "EXECUTE_CODE":
-        return execute_code(*args)
+        response = execute_code(*args)
 
     elif action == "EXECUTE_CODE_IN_SESSION":
-        return execute_code_in_session(*args)
+        response = execute_code_in_session(*args)
 
-    elif action == "IMPORT_FILE":
-        return import_file(*args)
+    elif action == "IMPORT_FILE_IN_SESSION":
+        response = import_file(*args)
 
-    elif action == "DELETE_FILE":
-        return delete_file(*args)
+    elif action == "DELETE_FILE_IN_SESSION":
+        response = delete_file(*args)
 
     else:
         raise ValueError(f"Invalid action: {action}")
+
+    if not response["success"] and response["error"]:
+        raise Exception(response["error"]["message"])
+
+    return response["result"]

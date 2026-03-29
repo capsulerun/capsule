@@ -12,11 +12,8 @@ export function serializeValue(val: unknown): SerializedValue {
   }
 
   if (Array.isArray(val)) {
-    const items = val.map(serializeValue);
-    if (items.every((i) => i !== null)) {
-      return { __type__: "list", value: items as SerializedValue[] };
-    }
-    return null;
+    const items = val.map(serializeValue).filter((i): i is SerializedValue => i !== null);
+    return { __type__: "list", value: items };
   }
 
   if (typeof val === "function") {
@@ -34,8 +31,7 @@ export function serializeValue(val: unknown): SerializedValue {
       const pairs: Record<string, SerializedValue> = {};
       for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
         const s = serializeValue(v);
-        if (s === null) return null;
-        pairs[k] = s;
+        if (s !== null) pairs[k] = s;
       }
       return { __type__: "dict", value: pairs };
     }
@@ -49,8 +45,7 @@ export function serializeValue(val: unknown): SerializedValue {
     const dict: Record<string, SerializedValue> = {};
     for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
       const s = serializeValue(v);
-      if (s === null) return null;
-      dict[k] = s;
+      if (s !== null) dict[k] = s;
     }
     return { __type__: "instance", __class__: ctor!.name!, __source__: source, __dict__: dict };
   }

@@ -48,6 +48,7 @@ export class Session {
       file: this.sandboxFile,
       args: [action, ...args],
     });
+
     if (!res.success) throw new Error(`Capsule session failed: ${res.error?.message}`);
     return unwrapResult(res.result);
   }
@@ -59,12 +60,12 @@ export class Session {
 
   /** Write a file into the session workspace. */
   async importFile(path: string, content: string): Promise<string> {
-    return this.invoke("IMPORT_FILE", path, content);
+    return this.invoke("IMPORT_FILE_IN_SESSION", path, content);
   }
 
   /** Delete a file from the session workspace. */
   async deleteFile(filePath: string): Promise<string> {
-    return this.invoke("DELETE_FILE", filePath);
+    return this.invoke("DELETE_FILE_IN_SESSION", filePath);
   }
 
   /** Clear session state, preserving workspace files. */

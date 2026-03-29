@@ -57,11 +57,11 @@ class Session:
 
     async def import_file(self, path: str, content: str) -> str:
         """Write a file into the session workspace."""
-        return await self._invoke("IMPORT_FILE", self._id, path, content)
+        return await self._invoke("IMPORT_FILE_IN_SESSION", self._id, path, content)
 
     async def delete_file(self, path: str) -> str:
         """Delete a file from the session workspace."""
-        return await self._invoke("DELETE_FILE", self._id, path)
+        return await self._invoke("DELETE_FILE_IN_SESSION", self._id, path)
 
     async def reset(self) -> None:
         """Clear session state, preserving workspace files."""
