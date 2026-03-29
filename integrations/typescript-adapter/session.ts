@@ -24,7 +24,6 @@ import * as fs from "fs";
 import { SANDBOX_PY, SANDBOX_JS, unwrapResult } from "./execution.js";
 
 const SESSIONS_DIR = resolve(".capsule/sessions");
-const WORKSPACE_DIR = resolve(SESSIONS_DIR, "workspace");
 
 type SandboxType = "python" | "javascript";
 
@@ -32,13 +31,15 @@ export class Session {
   private readonly sandboxFile: string;
   private readonly id: string;
   private readonly stateFile: string;
+  private readonly workspaceDir: string;
 
   constructor(type: SandboxType = "python") {
     this.sandboxFile = type === "python" ? SANDBOX_PY : SANDBOX_JS;
     this.id = randomUUID().replace(/-/g, "");
     this.stateFile = resolve(SESSIONS_DIR, `${this.id}_state.json`);
+    this.workspaceDir = resolve(SESSIONS_DIR, `${this.id}_workspace`);
     fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-    fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+    fs.mkdirSync(this.workspaceDir, { recursive: true });
     fs.writeFileSync(this.stateFile, "{}");
   }
 
@@ -74,6 +75,9 @@ export class Session {
   async [Symbol.asyncDispose](): Promise<void> {
     if (fs.existsSync(this.stateFile)) {
       fs.rmSync(this.stateFile);
+    }
+    if (fs.existsSync(this.workspaceDir)) {
+      fs.rmSync(this.workspaceDir, { recursive: true });
     }
   }
 }

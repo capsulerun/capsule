@@ -9,10 +9,12 @@ from serialization import _serialize_env, _deserialize_env
 @task(
     name="import_file",
     compute="MEDIUM",
-    allowed_files=[{"path": ".capsule/sessions/workspace", "mode": "read-write"}],
+    ram="256MB",
+    allowed_files=[{"path": ".capsule/sessions", "mode": "read-write"}],
 )
-def import_file(path: str, content: str):
-    full_path = os.path.normpath(os.path.join(".capsule/sessions/workspace", path))
+def import_file(session_id: str, path: str, content: str):
+    workspace = f".capsule/sessions/{session_id}_workspace"
+    full_path = os.path.normpath(os.path.join(workspace, path))
     os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
     with open(full_path, "w") as f:
@@ -24,10 +26,12 @@ def import_file(path: str, content: str):
 @task(
     name="delete_file",
     compute="MEDIUM",
-    allowed_files=[{"path": ".capsule/sessions/workspace", "mode": "read-write"}],
+    ram="256MB",
+    allowed_files=[{"path": ".capsule/sessions", "mode": "read-write"}],
 )
-def delete_file(path: str):
-    full_path = os.path.normpath(os.path.join(".capsule/sessions/workspace", path))
+def delete_file(session_id: str, path: str):
+    workspace = f".capsule/sessions/{session_id}_workspace"
+    full_path = os.path.normpath(os.path.join(workspace, path))
     os.remove(full_path)
 
     return f"Deleted {path}"
@@ -65,6 +69,7 @@ def execute_code(code: str, env: dict = {}):
 @task(
     name="execute_code_in_session",
     compute="MEDIUM",
+    ram="256MB",
     allowed_files=[{"path": ".capsule/sessions", "mode": "read-write"}],
 )
 def execute_code_in_session(code: str, session_id: str):

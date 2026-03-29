@@ -4,7 +4,11 @@ import { deserializeEnv, serializeEnv, SerializedValue } from "./serialization";
 
 
 const executeCode = task(
-  { name: "executeCode", compute: "LOW", ram: "256MB" },
+  { name: "executeCode",
+    compute: "LOW",
+    ram: "256MB",
+    allowedFiles: [{ path: ".capsule/sessions", mode: "read-write" }]
+  },
   async (code: string, env: Record<string, unknown> = {}): Promise<unknown> => {
     const capturedOutput: string[] = [];
     const originalLog = console.log;
@@ -57,10 +61,12 @@ const importFile = task(
   {
     name: "importFile",
     compute: "MEDIUM",
-    allowedFiles: [{ path: ".capsule/sessions/workspace", mode: "read-write" }],
+    ram: "256MB",
+    allowedFiles: [{ path: ".capsule/sessions", mode: "read-write" }],
   },
-  async (filePath: string, content: string): Promise<string> => {
-    const fullPath = `.capsule/sessions/workspace/${filePath}`;
+  async (sessionId: string, filePath: string, content: string): Promise<string> => {
+    const fullPath = `.capsule/sessions/${sessionId}_workspace/${filePath}`;
+    await fs.mkdir(`.capsule/sessions/${sessionId}_workspace`, { recursive: true });
     await fs.writeFile(fullPath, content);
     return `Imported ${filePath}`;
   }
@@ -70,17 +76,18 @@ const deleteFile = task(
   {
     name: "deleteFile",
     compute: "MEDIUM",
-    allowedFiles: [{ path: ".capsule/sessions/workspace", mode: "read-write" }],
+    ram: "256MB",
+    allowedFiles: [{ path: ".capsule/sessions", mode: "read-write" }],
   },
-  async (filePath: string): Promise<string> => {
-    const fullPath = `.capsule/sessions/workspace/${filePath}`;
+  async (sessionId: string, filePath: string): Promise<string> => {
+    const fullPath = `.capsule/sessions/${sessionId}_workspace/${filePath}`;
     await fs.unlink(fullPath);
     return `Deleted ${filePath}`;
   }
 );
 
 export const main = task(
-  { name: "main", compute: "LOW" },
+  { name: "main", compute: "HIGH" },
   (action: string, ...args: string[]): Promise<unknown> => {
     if (action === "EXECUTE_CODE") {
       return executeCode(...args);

@@ -11,7 +11,6 @@ from capsule import run
 from .execution import _SANDBOX_PY, _SANDBOX_JS, _unwrap_result
 
 _SESSIONS_DIR = Path(".capsule/sessions")
-_WORKSPACE_DIR = _SESSIONS_DIR / "workspace"
 
 
 class Session:
@@ -19,7 +18,7 @@ class Session:
 
     Each run() call is a fresh Wasm instance. State is serialized to
     ``.capsule/sessions/<id>_state.json`` between calls. Workspace files
-    live under ``.capsule/sessions/workspace/``.
+    live under ``.capsule/sessions/<id>_workspace/``.
 
     Usage::
 
@@ -36,8 +35,9 @@ class Session:
         self._sandbox = _SANDBOX_PY if type == "python" else _SANDBOX_JS
         self._id = uuid.uuid4().hex
         self._state_file = _SESSIONS_DIR / f"{self._id}_state.json"
+        self._workspace_dir = _SESSIONS_DIR / f"{self._id}_workspace"
         _SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
-        _WORKSPACE_DIR.mkdir(exist_ok=True)
+        self._workspace_dir.mkdir(exist_ok=True)
         self._state_file.write_text("{}")
 
     async def _invoke(self, action: str, *args: str) -> str:
@@ -57,11 +57,11 @@ class Session:
 
     async def import_file(self, path: str, content: str) -> str:
         """Write a file into the session workspace."""
-        return await self._invoke("IMPORT_FILE", path, content)
+        return await self._invoke("IMPORT_FILE", self._id, path, content)
 
     async def delete_file(self, path: str) -> str:
         """Delete a file from the session workspace."""
-        return await self._invoke("DELETE_FILE", path)
+        return await self._invoke("DELETE_FILE", self._id, path)
 
     async def reset(self) -> None:
         """Clear session state, preserving workspace files."""
@@ -73,3 +73,5 @@ class Session:
     async def __aexit__(self, *_):
         if self._state_file.exists():
             self._state_file.unlink()
+        if self._workspace_dir.exists():
+            shutil.rmtree(self._workspace_dir)
