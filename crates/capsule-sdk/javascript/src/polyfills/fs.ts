@@ -8,11 +8,25 @@ declare const globalThis: {
     'wasi:filesystem/preopens': any;
 };
 
+interface DescriptorStat {
+    size: bigint;
+    type?: string;
+}
+
+interface DirectoryEntry {
+    name: string;
+    type?: string;
+}
+
+interface DirectoryStream {
+    readDirectoryEntry(): DirectoryEntry | null;
+}
+
 interface Descriptor {
     read(length: bigint, offset: bigint): [Uint8Array, boolean];
     write(buffer: Uint8Array, offset: bigint): bigint;
-    stat(): { size: bigint };
-    readDirectory(): any;
+    stat(): DescriptorStat;
+    readDirectory(): DirectoryStream;
     unlinkFileAt(path: string): void;
     removeDirectoryAt(path: string): void;
     openAt(
@@ -308,18 +322,100 @@ export async function unlink(path: string): Promise<void> {
 }
 
 /**
- * Delete a directory.
+ * Returns 'file', 'directory', or 'notfound' for a given path.
  */
-export async function rmdir(path: string): Promise<void> {
+async function statPath(path: string): Promise<'file' | 'directory' | 'notfound'> {
+    const resolved = resolvePath(path);
+    if (!resolved) return 'notfound';
+
+    try {
+        const fd = resolved.dir.openAt({ symlinkFollow: false }, resolved.relativePath, {}, { read: true });
+        const s = fd.stat();
+        if (s.type === 'directory') return 'directory';
+        return 'file';
+    } catch {
+        return 'notfound';
+    }
+}
+
+/**
+ * Recursively delete a directory and all its contents.
+ */
+async function removeRecursive(path: string): Promise<void> {
+    const resolved = resolvePath(path);
+    if (!resolved) throw new Error(`Path not found: '${path}'`);
+
+    const fd = resolved.dir.openAt(
+        { symlinkFollow: false },
+        resolved.relativePath,
+        { directory: true },
+        { read: true, mutateDirectory: true }
+    );
+
+    const stream = fd.readDirectory();
+    let entry: DirectoryEntry | null | undefined;
+
+    while ((entry = stream.readDirectoryEntry()) && entry) {
+        if (!entry.name) continue;
+        const childPath = path.replace(/\/$/, '') + '/' + entry.name;
+        if (entry.type === 'directory') {
+            await removeRecursive(childPath);
+        } else {
+            await unlink(childPath);
+        }
+    }
+
+    resolved.dir.removeDirectoryAt(resolved.relativePath);
+}
+
+export interface RmdirOptions {
+    recursive?: boolean;
+}
+
+/**
+ * Delete a directory. Pass `{ recursive: true }` to remove it and all its contents.
+ */
+export async function rmdir(path: string, options?: RmdirOptions): Promise<void> {
     const resolved = resolvePath(path);
     if (!resolved) {
         throw new Error("Folder not found.");
     }
 
     try {
-        resolved.dir.removeDirectoryAt(resolved.relativePath);
+        if (options?.recursive) {
+            await removeRecursive(path);
+        } else {
+            resolved.dir.removeDirectoryAt(resolved.relativePath);
+        }
     } catch (e) {
+        if (e instanceof Error && e.message.startsWith('Failed to remove')) throw e;
         throw new Error(`Failed to remove directory '${path}': ${e}`);
+    }
+}
+
+export interface RmOptions {
+    recursive?: boolean;
+    force?: boolean;
+}
+
+/**
+ * Remove a file or directory. Supports `{ recursive, force }` options.
+ */
+export async function rm(path: string, options?: RmOptions): Promise<void> {
+    const kind = await statPath(path);
+
+    if (kind === 'notfound') {
+        if (options?.force) return;
+        throw new Error(`ENOENT: no such file or directory, rm '${path}'`);
+    }
+
+    if (kind === 'directory') {
+        if (!options?.recursive) {
+            throw new Error(`EISDIR: illegal operation on a directory, rm '${path}' (use { recursive: true })`);
+        }
+        await removeRecursive(path);
+    } else {
+        await unlink(path);
     }
 }
 
@@ -356,19 +452,23 @@ export const promises = {
         await unlink(path);
     },
 
-    async rmdir(path: string): Promise<void> {
-        await rmdir(path);
-    },
-
     async stat(path: string): Promise<{ isFile: () => boolean; isDirectory: () => boolean }> {
-        const fileExists = await exists(path);
-        if (!fileExists) {
+        const kind = await statPath(path);
+        if (kind === 'notfound') {
             throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
         }
         return {
-            isFile: () => true,
-            isDirectory: () => false,
+            isFile: () => kind === 'file',
+            isDirectory: () => kind === 'directory',
         };
+    },
+
+    async rmdir(path: string, options?: RmdirOptions): Promise<void> {
+        await rmdir(path, options);
+    },
+
+    async rm(path: string, options?: RmOptions): Promise<void> {
+        await rm(path, options);
     },
 };
 
@@ -379,6 +479,7 @@ const fs = {
     existsSync,
     unlink,
     rmdir,
+    rm,
     promises,
 };
 
