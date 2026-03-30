@@ -65,6 +65,7 @@ fn extract_main_execution_policy(
 pub async fn execute(
     file_path: Option<&Path>,
     args: Vec<String>,
+    mounts: Vec<String>,
     json: bool,
     verbose: bool,
 ) -> Result<String, RunError> {
@@ -95,9 +96,11 @@ pub async fn execute(
         verbose,
     };
 
-    let execution_policy =
+    let mut execution_policy =
         extract_main_execution_policy(compile_result.task_registry, &manifest.capsule_toml)
             .unwrap_or_else(|| ExecutionPolicy::default().compute(Some(Compute::Custom(u64::MAX))));
+
+    execution_policy.mounts.extend(mounts);
 
     let runtime = Runtime::new(runtime_config, manifest.capsule_toml)?;
 

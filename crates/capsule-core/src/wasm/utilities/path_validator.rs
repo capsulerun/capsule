@@ -50,18 +50,23 @@ impl fmt::Display for PathValidationError {
 
 impl Error for PathValidationError {}
 
-fn parse_path_with_mode(path_spec: &str) -> (String, FileAccessMode) {
-    if let Some(pos) = path_spec.rfind(':') {
-        let (path, mode_str) = path_spec.split_at(pos);
-        let mode = &mode_str[1..];
-
-        match mode {
-            "ro" => (path.to_string(), FileAccessMode::ReadOnly),
-            "rw" => (path.to_string(), FileAccessMode::ReadWrite),
-            _ => (path_spec.to_string(), FileAccessMode::default()),
-        }
+fn parse_path_spec(path_spec: &str) -> (String, Option<String>, FileAccessMode) {
+    let (spec, mode) = if path_spec.ends_with(":ro") {
+        let stripped = path_spec.strip_suffix(":ro").unwrap();
+        (stripped, FileAccessMode::ReadOnly)
+    } else if path_spec.ends_with(":rw") {
+        let stripped = path_spec.strip_suffix(":rw").unwrap();
+        (stripped, FileAccessMode::ReadWrite)
     } else {
-        (path_spec.to_string(), FileAccessMode::default())
+        (path_spec, FileAccessMode::default())
+    };
+
+    if let Some(idx) = spec.find("::") {
+        let host = spec[..idx].to_string();
+        let guest = spec[idx + 2..].to_string();
+        (host, Some(guest), mode)
+    } else {
+        (spec.to_string(), None, mode)
     }
 }
 
@@ -69,29 +74,31 @@ pub fn validate_path(
     path_spec: &str,
     project_root: &Path,
 ) -> Result<ParsedPath, PathValidationError> {
-    let (path_str, mode) = parse_path_with_mode(path_spec);
-    let p = Path::new(&path_str);
+    let (host_str, guest_alias, mode) = parse_path_spec(path_spec);
+    let p = Path::new(&host_str);
 
     if p.is_absolute() {
-        return Err(PathValidationError::AbsolutePathNotAllowed(path_str));
+        return Err(PathValidationError::AbsolutePathNotAllowed(host_str));
     }
 
     let joined = project_root.join(p);
     let resolved = joined
         .canonicalize()
-        .map_err(|_| PathValidationError::PathNotFound(path_str.clone()))?;
+        .map_err(|_| PathValidationError::PathNotFound(host_str.clone()))?;
 
     let canonical_root = project_root
         .canonicalize()
-        .map_err(|_| PathValidationError::EscapesProjectDirectory(path_str.clone()))?;
+        .map_err(|_| PathValidationError::EscapesProjectDirectory(host_str.clone()))?;
 
     if !resolved.starts_with(&canonical_root) {
-        return Err(PathValidationError::EscapesProjectDirectory(path_str));
+        return Err(PathValidationError::EscapesProjectDirectory(host_str));
     }
+
+    let guest_path = guest_alias.unwrap_or_else(|| host_str.clone());
 
     Ok(ParsedPath {
         path: resolved,
-        guest_path: path_str,
+        guest_path,
         mode,
     })
 }
@@ -154,22 +161,41 @@ mod tests {
 
     #[test]
     fn test_parse_mode_readonly() {
-        let (path, mode) = parse_path_with_mode("./data:ro");
+        let (path, guest, mode) = parse_path_spec("./data:ro");
         assert_eq!(path, "./data");
+        assert_eq!(guest, None);
         assert_eq!(mode, FileAccessMode::ReadOnly);
     }
 
     #[test]
     fn test_parse_mode_readwrite() {
-        let (path, mode) = parse_path_with_mode("./output:rw");
+        let (path, guest, mode) = parse_path_spec("./output:rw");
         assert_eq!(path, "./output");
+        assert_eq!(guest, None);
         assert_eq!(mode, FileAccessMode::ReadWrite);
     }
 
     #[test]
     fn test_parse_mode_default() {
-        let (path, mode) = parse_path_with_mode("./data");
+        let (path, guest, mode) = parse_path_spec("./data");
         assert_eq!(path, "./data");
+        assert_eq!(guest, None);
         assert_eq!(mode, FileAccessMode::ReadWrite);
+    }
+
+    #[test]
+    fn test_parse_alias() {
+        let (path, guest, mode) = parse_path_spec("./data::workspace");
+        assert_eq!(path, "./data");
+        assert_eq!(guest, Some("workspace".to_string()));
+        assert_eq!(mode, FileAccessMode::ReadWrite);
+    }
+
+    #[test]
+    fn test_parse_alias_with_mode() {
+        let (path, guest, mode) = parse_path_spec("./data::workspace:ro");
+        assert_eq!(path, "./data");
+        assert_eq!(guest, Some("workspace".to_string()));
+        assert_eq!(mode, FileAccessMode::ReadOnly);
     }
 }

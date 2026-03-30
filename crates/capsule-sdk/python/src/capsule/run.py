@@ -44,6 +44,7 @@ async def run(
     *,
     file: str,
     args: Optional[list[str]] = None,
+    mounts: Optional[list[str]] = None,
     cwd: Optional[str] = None,
     capsule_path: str = "capsule",
 ) -> RunnerResult:
@@ -59,6 +60,7 @@ async def run(
         RunnerResult with task result and execution metadata
     """
     args = args or []
+    mounts = mounts or []
 
     resolved_file = os.path.abspath(os.path.join(cwd or os.getcwd(), file))
     ext = os.path.splitext(resolved_file)[1].lower()
@@ -79,7 +81,8 @@ async def run(
         raise FileNotFoundError(f"File not found: {resolved_file}")
 
     subcommand = "exec" if ext in _WASM_EXTENSIONS else "run"
-    cmd = [capsule_path, subcommand, resolved_file, "--json", *args]
+    mount_flags = [flag for m in mounts for flag in ("--mount", m)]
+    cmd = [capsule_path, subcommand, resolved_file, "--json", *mount_flags, *args]
 
     try:
         process = await asyncio.create_subprocess_exec(

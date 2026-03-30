@@ -20,6 +20,9 @@ pub enum Commands {
         #[arg(long)]
         verbose: bool,
 
+        #[arg(long, value_name = "HOST[::GUEST][:ro|:rw]")]
+        mount: Vec<String>,
+
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -37,6 +40,9 @@ pub enum Commands {
 
         #[arg(long)]
         verbose: bool,
+
+        #[arg(long, value_name = "HOST[::GUEST][:ro|:rw]")]
+        mount: Vec<String>,
 
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
