@@ -94,9 +94,6 @@ async with Session() as s:
     # Import a single file
     await s.import_file("./notes.txt", "notes.txt")
 
-    # Import a directory
-    await s.import_file("./data/", "data/")
-
     result = await s.run("""
 with open("workspace/notes.txt") as f:
     content = f.read()

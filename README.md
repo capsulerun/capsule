@@ -326,7 +326,7 @@ Plain strings are still accepted: `allowedFiles: ["./output"]` defaults to read-
 
 #### Dynamic directory aliases (`--mount`)
 
-The `--mount` flag (CLI) or `mounts` parameter (SDK) mount a host directory into the sandbox under an alias. Mounts propagate to sub-tasks and add access to new paths — they don't change the access mode of paths already declared in `allowed_files`.
+The `--mount` flag (CLI) or `mounts` parameter (SDK) mount a host directory into the sandbox under an alias. Mounts propagate to sub-tasks and add access to new paths, they don't change the access mode of paths already declared in `allowed_files`.
 
 **Format:** `HOST_PATH[::GUEST_PATH][:ro|:rw]`
 
@@ -340,12 +340,12 @@ The `--mount` flag (CLI) or `mounts` parameter (SDK) mount a host directory into
 
 ```bash
 # Mount a session workspace and expose it as "workspace" inside the task
-capsule run main.py --mount .capsule/sessions/abc123_workspace::workspace
+capsule run main.py --mount sessions/abc123_workspace::workspace
 
 # Multiple directories
 capsule run main.py \
-  --mount .capsule/sessions/abc123_workspace::workspace \
-  --mount .capsule/sessions/bce456_workspace::workspace:ro
+  --mount sessions/abc123_workspace::workspace \
+  --mount sessions/bce456_workspace::workspace:ro
 ```
 
 **Python SDK**
