@@ -63,6 +63,72 @@ await loadPythonSandbox();      // Warm up Python only
 await loadJavaScriptSandbox();  // Warm up JavaScript only
 ```
 
+### Sessions (Persistent State)
+
+Use `Session` to run code across multiple calls while preserving state. Each session gets an isolated workspace directory that is automatically cleaned up when the session ends.
+
+```typescript
+import { Session } from '@capsule-run/adapter';
+
+await using s = new Session("python");
+await s.run("x = 1");
+const result = await s.run("x += 1; x");
+console.log(result); // 2
+```
+
+JavaScript sessions work the same way:
+
+```typescript
+await using s = new Session("javascript");
+await s.run("x = 1");
+const result = await s.run("x += 1; x");
+console.log(result); // 2
+```
+
+> `await using` automatically cleans up the session when it goes out of scope. You can also call `[Symbol.asyncDispose]()` manually if needed.
+
+#### Import Files
+
+Copy a file or directory from your filesystem into the session workspace. The sandbox code can then access it at the destination path under `workspace/`.
+
+```typescript
+await using s = new Session("python");
+
+// Import a single file
+await s.importFile("./notes.txt", "notes.txt");
+
+// Import a directory
+await s.importFile("./data/", "data/");
+
+const result = await s.run(`
+with open("workspace/notes.txt") as f:
+    content = f.read()
+content
+`);
+```
+
+#### Delete Files
+
+Remove a file from the session workspace:
+
+```typescript
+await using s = new Session("python");
+await s.importFile("./notes.txt", "notes.txt");
+// ... do some work ...
+await s.deleteFile("notes.txt");
+```
+
+#### Reset State
+
+Clear the session's variable state without touching workspace files:
+
+```typescript
+await using s = new Session("python");
+await s.run("x = 42");
+s.reset();
+const result = await s.run("x"); // throws
+```
+
 ## How It Works
 
 The adapter compiles Python and JavaScript sandboxes into WebAssembly modules during the build step. When you call `runPython()` or `runJavaScript()`, the adapter invokes these pre-built sandboxes using Capsule's runner with the code you provide.

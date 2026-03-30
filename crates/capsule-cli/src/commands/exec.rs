@@ -46,6 +46,7 @@ impl From<ManifestError> for ExecError {
 pub async fn execute(
     wasm_path: &Path,
     args: Vec<String>,
+    mounts: Vec<String>,
     json: bool,
     verbose: bool,
 ) -> Result<String, ExecError> {
@@ -87,7 +88,9 @@ pub async fn execute(
 
     let runtime_config = RuntimeConfig { cache_dir, verbose };
 
-    let execution_policy = ExecutionPolicy::default().compute(Some(Compute::Custom(u64::MAX)));
+    let mut execution_policy = ExecutionPolicy::default().compute(Some(Compute::Custom(u64::MAX)));
+
+    execution_policy.mounts.extend(mounts);
 
     let runtime = Runtime::new(runtime_config, capsule_toml)?;
 

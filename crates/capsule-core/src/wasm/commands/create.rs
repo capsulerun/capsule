@@ -108,7 +108,13 @@ impl RuntimeCommand for CreateInstance {
             .envs(&envs)
             .args(&self.args);
 
-        for path_spec in &self.policy.allowed_files {
+        let all_paths = self
+            .policy
+            .allowed_files
+            .iter()
+            .chain(self.policy.mounts.iter());
+
+        for path_spec in all_paths {
             match validate_path(path_spec, &self.project_root) {
                 Ok(parsed) => {
                     let (dir_perms, file_perms) = match parsed.mode {

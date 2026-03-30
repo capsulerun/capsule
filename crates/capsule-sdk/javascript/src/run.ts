@@ -12,6 +12,7 @@ import { existsSync } from 'fs';
 export interface RunnerOptions {
   file: string;
   args?: string[];
+  mounts?: string[];
   cwd?: string;
   capsulePath?: string;
 }
@@ -47,7 +48,7 @@ function getCapsuleCommand(capsulePath: string): string {
  * @returns Promise with the runner result
  */
 export function run(options: RunnerOptions): Promise<RunnerResult> {
-  const { file, args = [], cwd, capsulePath = 'capsule' } = options;
+  const { file, args = [], mounts = [], cwd, capsulePath = 'capsule' } = options;
   const command = getCapsuleCommand(capsulePath);
 
   const resolvedFile = resolve(cwd || process.cwd(), file);
@@ -64,7 +65,8 @@ export function run(options: RunnerOptions): Promise<RunnerResult> {
   const subcommand = isWasm ? 'exec' : 'run';
 
   return new Promise((resolve, reject) => {
-    const cmdArgs = [subcommand, resolvedFile, '--json', ...args];
+    const mountFlags = mounts.flatMap(m => ['--mount', m]);
+    const cmdArgs = [subcommand, resolvedFile, '--json', ...mountFlags, ...args];
 
     let executable = command;
     let executionArgs = cmdArgs;

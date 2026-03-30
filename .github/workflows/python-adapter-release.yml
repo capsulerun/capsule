@@ -30,8 +30,8 @@ jobs:
       - name: Build python_sandbox.wasm
         working-directory: integrations/python-adapter
         run: |
-          capsule build src/python_sandbox.py --export
-          mv src/python_sandbox.wasm capsule_adapter/sandboxes/python_sandbox.wasm
+          capsule build src/python_sandbox/index.py --export
+          mv src/python_sandbox/index.wasm capsule_adapter/sandboxes/python_sandbox.wasm
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -50,8 +50,8 @@ jobs:
       - name: Build js_sandbox.wasm
         working-directory: integrations/python-adapter
         run: |
-          capsule build src/js_sandbox.ts --export
-          mv src/js_sandbox.wasm capsule_adapter/sandboxes/js_sandbox.wasm
+          capsule build src/js_sandbox/index.ts --export
+          mv src/js_sandbox/index.wasm capsule_adapter/sandboxes/js_sandbox.wasm
 
       - name: Upload wasm sandboxes
         uses: actions/upload-artifact@v4

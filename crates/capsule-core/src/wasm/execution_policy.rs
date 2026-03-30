@@ -36,6 +36,9 @@ pub struct ExecutionPolicy {
     #[serde(default)]
     pub allowed_files: Vec<String>,
 
+    #[serde(skip)]
+    pub mounts: Vec<String>,
+
     #[serde(default)]
     pub allowed_hosts: Vec<String>,
 
@@ -52,6 +55,7 @@ impl Default for ExecutionPolicy {
             timeout: None,
             max_retries: 0,
             allowed_files: Vec::new(),
+            mounts: Vec::new(),
             allowed_hosts: Vec::new(),
             env_variables: Vec::new(),
         }

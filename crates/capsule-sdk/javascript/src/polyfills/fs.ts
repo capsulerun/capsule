@@ -8,11 +8,28 @@ declare const globalThis: {
     'wasi:filesystem/preopens': any;
 };
 
+interface DescriptorStat {
+    size: bigint;
+    type?: string;
+}
+
+interface DirectoryEntry {
+    name: string;
+    type?: string;
+}
+
+interface DirectoryStream {
+    readDirectoryEntry(): DirectoryEntry | null;
+}
+
 interface Descriptor {
     read(length: bigint, offset: bigint): [Uint8Array, boolean];
     write(buffer: Uint8Array, offset: bigint): bigint;
-    stat(): { size: bigint };
-    readDirectory(): any;
+    stat(): DescriptorStat;
+    readDirectory(): DirectoryStream;
+    unlinkFileAt(path: string): void;
+    removeDirectoryAt(path: string): void;
+    createDirectoryAt(path: string): void;
     openAt(
         pathFlags: { symlinkFollow?: boolean },
         path: string,
@@ -65,11 +82,14 @@ function resolvePath(path: string): { dir: Descriptor; relativePath: string } | 
 
     const normalizedPath = normalizePath(path);
 
+    let catchAll: { dir: Descriptor; relativePath: string } | null = null;
+
     for (const { descriptor, guestPath } of preopens) {
         const normalizedGuest = normalizePath(guestPath);
 
         if (normalizedGuest === '.' || normalizedGuest === '') {
-            return { dir: descriptor, relativePath: normalizedPath };
+            if (!catchAll) catchAll = { dir: descriptor, relativePath: normalizedPath };
+            continue;
         }
 
         if (normalizedPath.startsWith(normalizedGuest + '/')) {
@@ -82,7 +102,7 @@ function resolvePath(path: string): { dir: Descriptor; relativePath: string } | 
         }
     }
 
-    return { dir: preopens[0].descriptor, relativePath: normalizedPath };
+    return catchAll ?? { dir: preopens[0].descriptor, relativePath: normalizedPath };
 }
 
 /**
@@ -99,7 +119,7 @@ export async function readText(path: string): Promise<string> {
 export async function readBytes(path: string): Promise<Uint8Array> {
     const resolved = resolvePath(path);
     if (!resolved) {
-        throw new Error("Filesystem not available.");
+        throw new Error("File not found.");
     }
 
     try {
@@ -130,13 +150,13 @@ export async function writeText(path: string, content: string): Promise<void> {
 export async function writeBytes(path: string, data: Uint8Array): Promise<void> {
     const resolved = resolvePath(path);
     if (!resolved) {
-        throw new Error("Filesystem not available.");
+        throw new Error("File not found.");
     }
 
     try {
         const pathFlags = { symlinkFollow: false };
         const openFlags = { create: true, truncate: true };
-        const descriptorFlags = { write: true };
+        const descriptorFlags = { write: true, mutateDirectory: true };
 
         const fd = resolved.dir.openAt(pathFlags, resolved.relativePath, openFlags, descriptorFlags);
         fd.write(data, BigInt(0));
@@ -151,7 +171,7 @@ export async function writeBytes(path: string, data: Uint8Array): Promise<void> 
 export async function list(path: string = "."): Promise<string[]> {
     const resolved = resolvePath(path);
     if (!resolved) {
-        throw new Error("Filesystem not available.");
+        throw new Error("Path not found.");
     }
 
     try {
@@ -285,6 +305,202 @@ export function existsSync(_path: string): boolean {
 }
 
 /**
+ * Delete a file.
+ */
+export async function unlink(path: string): Promise<void> {
+    const resolved = resolvePath(path);
+    if (!resolved) {
+        throw new Error("File not found.");
+    }
+
+    const fs = getFsBindings();
+    if (!fs) {
+        throw new Error("File not found.");
+    }
+
+    try {
+        resolved.dir.unlinkFileAt(resolved.relativePath);
+    } catch (e) {
+        throw new Error(`Failed to delete file '${path}': ${e}`);
+    }
+}
+
+/**
+ * Returns 'file', 'directory', or 'notfound' for a given path.
+ */
+async function statPath(path: string): Promise<'file' | 'directory' | 'notfound'> {
+    const resolved = resolvePath(path);
+    if (!resolved) return 'notfound';
+
+    try {
+        const fd = resolved.dir.openAt({ symlinkFollow: false }, resolved.relativePath, {}, { read: true });
+        const s = fd.stat();
+        if (s.type === 'directory') return 'directory';
+        return 'file';
+    } catch {
+        return 'notfound';
+    }
+}
+
+/**
+ * Recursively delete a directory and all its contents.
+ */
+async function removeRecursive(path: string): Promise<void> {
+    const resolved = resolvePath(path);
+    if (!resolved) throw new Error(`Path not found: '${path}'`);
+
+    const fd = resolved.dir.openAt(
+        { symlinkFollow: false },
+        resolved.relativePath,
+        { directory: true },
+        { read: true, mutateDirectory: true }
+    );
+
+    const stream = fd.readDirectory();
+    let entry: DirectoryEntry | null | undefined;
+
+    while ((entry = stream.readDirectoryEntry()) && entry) {
+        if (!entry.name) continue;
+        const childPath = path.replace(/\/$/, '') + '/' + entry.name;
+        if (entry.type === 'directory') {
+            await removeRecursive(childPath);
+        } else {
+            await unlink(childPath);
+        }
+    }
+
+    resolved.dir.removeDirectoryAt(resolved.relativePath);
+}
+
+export interface RmdirOptions {
+    recursive?: boolean;
+}
+
+/**
+ * Delete a directory. Pass `{ recursive: true }` to remove it and all its contents.
+ */
+export async function rmdir(path: string, options?: RmdirOptions): Promise<void> {
+    const resolved = resolvePath(path);
+    if (!resolved) {
+        throw new Error("Folder not found.");
+    }
+
+    try {
+        if (options?.recursive) {
+            await removeRecursive(path);
+        } else {
+            resolved.dir.removeDirectoryAt(resolved.relativePath);
+        }
+    } catch (e) {
+        if (e instanceof Error && e.message.startsWith('Failed to remove')) throw e;
+        throw new Error(`Failed to remove directory '${path}': ${e}`);
+    }
+}
+
+export interface RmOptions {
+    recursive?: boolean;
+    force?: boolean;
+}
+
+/**
+ * Remove a file or directory. Supports `{ recursive, force }` options.
+ */
+export async function rm(path: string, options?: RmOptions): Promise<void> {
+    const kind = await statPath(path);
+
+    if (kind === 'notfound') {
+        if (options?.force) return;
+        throw new Error(`ENOENT: no such file or directory, rm '${path}'`);
+    }
+
+    if (kind === 'directory') {
+        if (!options?.recursive) {
+            throw new Error(`EISDIR: illegal operation on a directory, rm '${path}' (use { recursive: true })`);
+        }
+        await removeRecursive(path);
+    } else {
+        await unlink(path);
+    }
+}
+
+export interface MkdirOptions {
+    recursive?: boolean;
+}
+
+/**
+ * Create a directory. Pass `{ recursive: true }` to create intermediate directories.
+ */
+export async function mkdir(path: string, options?: MkdirOptions): Promise<void> {
+    if (options?.recursive) {
+        const normalized = normalizePath(path);
+        const parts = normalized.split('/').filter(Boolean);
+        for (let i = 1; i <= parts.length; i++) {
+            const partial = parts.slice(0, i).join('/');
+            const resolved = resolvePath(partial);
+            if (!resolved) continue;
+            try {
+                resolved.dir.createDirectoryAt(resolved.relativePath);
+            } catch {
+                // Directory may already exist, continue
+            }
+        }
+    } else {
+        const resolved = resolvePath(path);
+        if (!resolved) throw new Error(`Cannot resolve path: '${path}'`);
+        try {
+            resolved.dir.createDirectoryAt(resolved.relativePath);
+        } catch (e) {
+            throw new Error(`Failed to create directory '${path}': ${e}`);
+        }
+    }
+}
+
+/**
+ * Copy a file from src to dest.
+ */
+export async function copyFile(src: string, dest: string): Promise<void> {
+    const data = await readBytes(src);
+    await writeBytes(dest, data);
+}
+
+async function copyDirRecursive(src: string, dest: string): Promise<void> {
+    await mkdir(dest, { recursive: true });
+    const entries = await list(src);
+    for (const entry of entries) {
+        const srcEntry = src.replace(/\/$/, '') + '/' + entry;
+        const destEntry = dest.replace(/\/$/, '') + '/' + entry;
+        const kind = await statPath(srcEntry);
+        if (kind === 'directory') {
+            await copyDirRecursive(srcEntry, destEntry);
+        } else {
+            await copyFile(srcEntry, destEntry);
+        }
+    }
+}
+
+export interface CpOptions {
+    recursive?: boolean;
+}
+
+/**
+ * Copy a file or directory. Pass `{ recursive: true }` to copy directories.
+ */
+export async function cp(src: string, dest: string, options?: CpOptions): Promise<void> {
+    const kind = await statPath(src);
+    if (kind === 'notfound') {
+        throw new Error(`ENOENT: no such file or directory '${src}'`);
+    }
+    if (kind === 'directory') {
+        if (!options?.recursive) {
+            throw new Error(`EISDIR: illegal operation on a directory '${src}' (use { recursive: true })`);
+        }
+        await copyDirRecursive(src, dest);
+    } else {
+        await copyFile(src, dest);
+    }
+}
+
+/**
  * Promises API
  */
 export const promises = {
@@ -313,15 +529,39 @@ export const promises = {
         }
     },
 
+    async unlink(path: string): Promise<void> {
+        await unlink(path);
+    },
+
     async stat(path: string): Promise<{ isFile: () => boolean; isDirectory: () => boolean }> {
-        const fileExists = await exists(path);
-        if (!fileExists) {
+        const kind = await statPath(path);
+        if (kind === 'notfound') {
             throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
         }
         return {
-            isFile: () => true,
-            isDirectory: () => false,
+            isFile: () => kind === 'file',
+            isDirectory: () => kind === 'directory',
         };
+    },
+
+    async rmdir(path: string, options?: RmdirOptions): Promise<void> {
+        await rmdir(path, options);
+    },
+
+    async rm(path: string, options?: RmOptions): Promise<void> {
+        await rm(path, options);
+    },
+
+    async mkdir(path: string, options?: MkdirOptions): Promise<void> {
+        await mkdir(path, options);
+    },
+
+    async copyFile(src: string, dest: string): Promise<void> {
+        await copyFile(src, dest);
+    },
+
+    async cp(src: string, dest: string, options?: CpOptions): Promise<void> {
+        await cp(src, dest, options);
     },
 };
 
@@ -330,6 +570,12 @@ const fs = {
     writeFile,
     readdir,
     existsSync,
+    unlink,
+    rmdir,
+    rm,
+    mkdir,
+    copyFile,
+    cp,
     promises,
 };
 

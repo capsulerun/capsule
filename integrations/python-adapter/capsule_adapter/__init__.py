@@ -11,6 +11,7 @@ from .execution import (
     run_javascript,
     run_python,
 )
+from .session import Session
 
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "run_javascript",
     "load_sandboxes",
     "load_python_sandbox",
-    "load_javascript_sandbox"
+    "load_javascript_sandbox",
+    "Session",
 ]

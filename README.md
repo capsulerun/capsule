@@ -324,6 +324,64 @@ export const main = task({
 
 Plain strings are still accepted: `allowedFiles: ["./output"]` defaults to read-write.
 
+#### Dynamic directory aliases (`--mount`)
+
+The `--mount` flag (CLI) or `mounts` parameter (SDK) mount a host directory into the sandbox under an alias. Mounts propagate to sub-tasks and add access to new paths, they don't change the access mode of paths already declared in `allowed_files`.
+
+**Format:** `HOST_PATH[::GUEST_PATH][:ro|:rw]`
+
+| Part | Required | Description |
+|------|----------|-------------|
+| `HOST_PATH` | yes | Path on the host machine (relative to `cwd`, must stay inside project root) |
+| `::GUEST_PATH` | no | Path the task sees inside the sandbox. Defaults to `HOST_PATH` |
+| `:ro` / `:rw` | no | Access mode. Defaults to read-write |
+
+**CLI**
+
+```bash
+# Mount a session workspace and expose it as "workspace" inside the task
+capsule run main.py --mount sessions/abc123_workspace::workspace
+
+# Multiple directories
+capsule run main.py \
+  --mount sessions/abc123_workspace::workspace \
+  --mount sessions/bce456_workspace::workspace:ro
+```
+
+**Python SDK**
+
+```python
+from capsule import run
+
+result = await run(
+    file="main.py",
+    mounts=[".capsule/sessions/abc123_workspace::workspace"],
+)
+```
+
+**TypeScript / JavaScript SDK**
+
+```typescript
+import { run } from "@capsule-run/sdk";
+
+const result = await run({
+    file: "main.py",
+    mounts: [".capsule/sessions/abc123_workspace::workspace"],
+});
+```
+
+Inside the task, the directory is accessed via the guest path:
+
+```python
+# task sees it at "workspace/", not at the full session path
+with open("workspace/output.txt", "w") as f:
+    f.write("done")
+```
+
+> [!NOTE]
+> `--mount` paths must be relative and must not escape the project root. Absolute paths are rejected.
+
+
 ### Environment Variables
 
 Tasks can access environment variables to read configuration, API keys, or other runtime settings.

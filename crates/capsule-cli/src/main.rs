@@ -52,10 +52,11 @@ async fn main() -> Result<(), CliError> {
             file,
             json,
             verbose,
+            mount,
             args,
         } => {
             let file_path = file.as_deref().map(Path::new);
-            let result = run::execute(file_path, args, json, verbose).await?;
+            let result = run::execute(file_path, args, mount, json, verbose).await?;
 
             if json {
                 println!("{}", result);
@@ -73,9 +74,10 @@ async fn main() -> Result<(), CliError> {
             file,
             json,
             verbose,
+            mount,
             args,
         } => {
-            let result = exec::execute(Path::new(&file), args, json, verbose).await?;
+            let result = exec::execute(Path::new(&file), args, mount, json, verbose).await?;
 
             if json {
                 println!("{}", result);
