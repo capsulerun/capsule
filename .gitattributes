@@ -1,4 +1,3 @@
 examples/** linguist-documentation=true
 integrations/** linguist-vendored=true
 integrations/README.md linguist-vendored=false
-assets/** linguist-vendored=true
