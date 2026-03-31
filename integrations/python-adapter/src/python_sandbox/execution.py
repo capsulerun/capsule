@@ -3,6 +3,16 @@ import sys
 from io import StringIO
 
 
+def _tag_definitions(code: str, tree: ast.Module, env: dict, before: set) -> None:
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            name = node.name
+            if name not in before and name in env:
+                segment = ast.get_source_segment(code, node)
+                if segment:
+                    env[name].__source__ = segment
+
+
 def _execute_code(code: str, env: dict):
     captured = StringIO()
     old_stdout = sys.stdout
@@ -30,10 +40,14 @@ def _execute_code(code: str, env: dict):
         if isinstance(last, ast.Expr):
             tree.body.pop()
             if tree.body:
+                before = set(env.keys())
                 exec(compile(tree, "<ast>", "exec"), env)
+                _tag_definitions(code, tree, env, before)
             result = eval(compile(ast.Expression(last.value), "<ast>", "eval"), env)
         else:
+            before = set(env.keys())
             exec(compile(tree, "<ast>", "exec"), env)
+            _tag_definitions(code, tree, env, before)
             result = None
     finally:
         sys.stdout = old_stdout
