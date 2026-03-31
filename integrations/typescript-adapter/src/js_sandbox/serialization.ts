@@ -23,8 +23,6 @@ export function serializeValue(val: unknown): SerializedValue {
     return { __type__: "primitive", value: val };
   }
 
-  // number must check NaN/Infinity before returning as primitive —
-  // JSON.stringify turns both into null which breaks the round-trip
   if (typeof val === "number") {
     if (Number.isNaN(val)) return { __type__: "nan" };
     if (!Number.isFinite(val)) return { __type__: "infinity", sign: val > 0 ? 1 : -1 };
@@ -163,8 +161,6 @@ export function deserializeValue(
 export function deserializeEnv(data: Record<string, SerializedValue>, env: Record<string, unknown>): void {
   const classes: Record<string, new (...args: unknown[]) => unknown> = {};
 
-  // First pass: exec all class and function definitions so they're available
-  // when instances are reconstructed in the second pass
   for (const [key, entry] of Object.entries(data)) {
     if (entry?.__type__ === "classdef") {
       const Cls = eval(`(${entry.__source__})`);

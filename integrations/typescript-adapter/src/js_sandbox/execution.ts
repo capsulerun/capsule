@@ -2,13 +2,12 @@ function hoistDeclarations(code: string): string {
   let depth = 0;
   let i = 0;
   let out = "";
-  // tracks whether the last meaningful token allows a regex to follow
   let lastTokenCanPrecedeRegex = true;
+  let atStatementStart = true;
 
   while (i < code.length) {
     const ch = code[i];
 
-    // Line comment — skip to end of line
     if (ch === "/" && code[i + 1] === "/") {
       const nl = code.indexOf("\n", i);
       const end = nl === -1 ? code.length : nl + 1;
@@ -17,7 +16,6 @@ function hoistDeclarations(code: string): string {
       continue;
     }
 
-    // Block comment — skip to */
     if (ch === "/" && code[i + 1] === "*") {
       const cl = code.indexOf("*/", i + 2);
       const end = cl === -1 ? code.length : cl + 2;
@@ -26,14 +24,12 @@ function hoistDeclarations(code: string): string {
       continue;
     }
 
-    // Regex literal — only when / can't be division
     if (ch === "/" && lastTokenCanPrecedeRegex) {
       let j = i + 1;
       while (j < code.length && code[j] !== "/") {
         if (code[j] === "\\") j++;
         j++;
       }
-      // consume flags after closing /
       j++;
       while (j < code.length && /[gimsuy]/.test(code[j])) j++;
       out += code.slice(i, j);
@@ -42,7 +38,6 @@ function hoistDeclarations(code: string): string {
       continue;
     }
 
-    // String literal — skip to closing quote, respecting backslash escapes
     if (ch === '"' || ch === "'") {
       let j = i + 1;
       while (j < code.length && code[j] !== ch) {
@@ -55,7 +50,6 @@ function hoistDeclarations(code: string): string {
       continue;
     }
 
-    // Template literal — skip to closing backtick, tracking ${} nesting
     if (ch === "`") {
       let j = i + 1;
       let tmplDepth = 0;
@@ -72,13 +66,16 @@ function hoistDeclarations(code: string): string {
       continue;
     }
 
-    if (ch === "{" || ch === "(" || ch === "[") { depth++; lastTokenCanPrecedeRegex = true; }
-    else if (ch === "}" || ch === ")" || ch === "]") { depth--; lastTokenCanPrecedeRegex = ch !== ")" && ch !== "]"; }
-    else if (ch === ";" || ch === ",") { lastTokenCanPrecedeRegex = true; }
-    else if (ch === "=" || ch === "+" || ch === "-" || ch === "*" || ch === "%" || ch === "!" || ch === "&" || ch === "|" || ch === "?" || ch === ":") { lastTokenCanPrecedeRegex = true; }
-    else if (/[a-zA-Z0-9_$]/.test(ch)) { lastTokenCanPrecedeRegex = false; }
+    const wasAtStatementStart = atStatementStart;
 
-    // Only rewrite at top level and when not preceded by an identifier char
+    if (ch === "{" || ch === "(" || ch === "[") { depth++; lastTokenCanPrecedeRegex = true; atStatementStart = false; }
+    else if (ch === "}" || ch === ")" || ch === "]") { depth--; lastTokenCanPrecedeRegex = ch !== ")" && ch !== "]"; atStatementStart = ch === "}" && depth === 0; }
+    else if (ch === ";" || ch === "\n") { lastTokenCanPrecedeRegex = true; atStatementStart = true; }
+    else if (ch === ",") { lastTokenCanPrecedeRegex = true; atStatementStart = false; }
+    else if (ch === "=" || ch === "+" || ch === "-" || ch === "*" || ch === "%" || ch === "!" || ch === "&" || ch === "|" || ch === "?" || ch === ":") { lastTokenCanPrecedeRegex = true; atStatementStart = false; }
+    else if (/[a-zA-Z0-9_$]/.test(ch)) { lastTokenCanPrecedeRegex = false; atStatementStart = false; }
+    else if (ch === " " || ch === "\t") { /* whitespace: preserve atStatementStart */ }
+
     if (depth === 0) {
       const prevCh = out.length > 0 ? out[out.length - 1] : "";
       const notIdent = prevCh === "" || !/[a-zA-Z0-9_$]/.test(prevCh);
@@ -86,6 +83,7 @@ function hoistDeclarations(code: string): string {
       if (notIdent) {
         const rest4 = code.slice(i, i + 4);
         const rest6 = code.slice(i, i + 6);
+        const rest9 = code.slice(i, i + 9);
         if (rest4 === "let " || rest4 === "let\t" || rest4 === "let\n") {
           out += "var" + code[i + 3];
           i += 4;
@@ -99,15 +97,25 @@ function hoistDeclarations(code: string): string {
           continue;
         }
         if (rest6 === "class " || rest6 === "class\t") {
-          // read the class name
           let j = i + 6;
           while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
           const name = code.slice(i + 6, j);
           if (name) {
-            // `class Foo ...` → `var Foo = class Foo ...`
             out += `var ${name} = class ${name}`;
             i = j;
             lastTokenCanPrecedeRegex = false;
+            continue;
+          }
+        }
+        if (wasAtStatementStart && (rest9 === "function " || rest9 === "function\t" || rest9 === "function\n")) {
+          let j = i + 9;
+          while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
+          const name = code.slice(i + 9, j);
+          if (name) {
+            out += `var ${name} = function ${name}`;
+            i = j;
+            lastTokenCanPrecedeRegex = false;
+            atStatementStart = false;
             continue;
           }
         }
