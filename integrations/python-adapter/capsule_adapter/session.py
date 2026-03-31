@@ -48,7 +48,6 @@ class Session:
             args=[action, *args],
             mounts=[f"{self._workspace_dir}::workspace"],
         )
-        print(res)
         if not res.get("success"):
             error = res.get("error", {})
             message = error.get("message") if isinstance(error, dict) else str(error)
