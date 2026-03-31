@@ -1,8 +1,9 @@
+import ast
+import base64
 import inspect
+import types
 
-_PRIMITIVE_TYPES = (int, float, str, bool, type(None))
 _MISSING = object()
-
 
 def _serialize_env(env: dict) -> dict:
     out = {}
@@ -16,12 +17,42 @@ def _serialize_env(env: dict) -> dict:
 
 
 def _serialize_value(val):
-    if isinstance(val, _PRIMITIVE_TYPES):
+    if isinstance(val, bool) or val is None:
         return {"__type__": "primitive", "value": val}
+
+    if isinstance(val, float):
+        if val != val:  # NaN
+            return {"__type__": "nan"}
+        if val == float("inf"):
+            return {"__type__": "infinity", "sign": 1}
+        if val == float("-inf"):
+            return {"__type__": "infinity", "sign": -1}
+        return {"__type__": "primitive", "value": val}
+
+    if isinstance(val, (int, str)):
+        return {"__type__": "primitive", "value": val}
+
+    if isinstance(val, complex):
+        return {"__type__": "complex", "real": val.real, "imag": val.imag}
+
+    if isinstance(val, bytes):
+        return {"__type__": "bytes", "value": base64.b64encode(val).decode()}
+
+    if isinstance(val, tuple):
+        items = [_serialize_value(v) for v in val]
+        return {"__type__": "tuple", "value": [i for i in items if i is not None]}
 
     if isinstance(val, list):
         items = [_serialize_value(v) for v in val]
         return {"__type__": "list", "value": [i for i in items if i is not None]}
+
+    if isinstance(val, frozenset):
+        items = [_serialize_value(v) for v in val]
+        return {"__type__": "frozenset", "value": [i for i in items if i is not None]}
+
+    if isinstance(val, set):
+        items = [_serialize_value(v) for v in val]
+        return {"__type__": "set", "value": [i for i in items if i is not None]}
 
     if isinstance(val, dict):
         pairs = {}
@@ -40,6 +71,12 @@ def _serialize_value(val):
             source = getattr(val, "__source__", None)
         if source:
             return {"__type__": "classdef", "__source__": source}
+        return None
+
+    if isinstance(val, (types.FunctionType, types.MethodType)):
+        source = getattr(val, "__source__", None)
+        if source:
+            return {"__type__": "function", "__source__": source}
         return None
 
     if hasattr(val, "__dict__") and hasattr(val, "__class__"):
@@ -65,23 +102,53 @@ def _serialize_value(val):
 
 def _deserialize_value(entry: dict, env: dict):
     t = entry.get("__type__")
+
     if t == "primitive":
         return entry["value"]
+    if t == "nan":
+        return float("nan")
+    if t == "infinity":
+        return float("inf") if entry["sign"] == 1 else float("-inf")
+    if t == "complex":
+        return complex(entry["real"], entry["imag"])
+    if t == "bytes":
+        return base64.b64decode(entry["value"])
+    if t == "tuple":
+        return tuple(_deserialize_list(entry["value"], env))
     if t == "list":
         return _deserialize_list(entry["value"], env)
+    if t == "frozenset":
+        return frozenset(_deserialize_list(entry["value"], env))
+    if t == "set":
+        return set(_deserialize_list(entry["value"], env))
     if t == "dict":
         return _deserialize_dict(entry["value"], env)
+
     if t == "classdef":
         source = entry["__source__"]
         exec(compile(source, "<session>", "exec"), env)
-        # find the class that was just defined and tag it
-        for v in env.values():
-            if isinstance(v, type) and not getattr(v, "__source__", None):
-                v.__source__ = source
-                return v
+        for node in ast.parse(source).body:
+            if isinstance(node, ast.ClassDef):
+                cls = env.get(node.name)
+                if cls is not None:
+                    cls.__source__ = source
+                    return cls
         return _MISSING
+
+    if t == "function":
+        source = entry["__source__"]
+        exec(compile(source, "<session>", "exec"), env)
+        for node in ast.parse(source).body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                fn = env.get(node.name)
+                if fn is not None:
+                    fn.__source__ = source
+                    return fn
+        return _MISSING
+
     if t == "instance":
         return _reconstruct_instance(entry, env)
+
     return _MISSING
 
 
@@ -120,24 +187,27 @@ def _deserialize_dict(pairs: dict, env: dict) -> dict:
 
 def _deserialize_env(data: dict, env: dict) -> None:
     for key, entry in data.items():
-        if isinstance(entry, dict) and entry.get("__type__") == "classdef":
-            source = entry["__source__"]
-            exec(compile(source, "<session>", "exec"), env)
-
-            cls = env.get(key) or next(
-                (v for v in env.values() if isinstance(v, type) and not getattr(v, "__source__", None)),
-                None
-            )
-            if cls is not None:
-                cls.__source__ = source
-
-    for key, entry in data.items():
         if not isinstance(entry, dict):
             continue
         t = entry.get("__type__")
         if t == "classdef":
-            pass
-        else:
-            value = _deserialize_value(entry, env)
-            if value is not _MISSING:
-                env[key] = value
+            source = entry["__source__"]
+            exec(compile(source, "<session>", "exec"), env)
+            cls = env.get(key)
+            if cls is not None:
+                cls.__source__ = source
+        elif t == "function":
+            source = entry["__source__"]
+            exec(compile(source, "<session>", "exec"), env)
+            fn = env.get(key)
+            if fn is not None:
+                fn.__source__ = source
+
+    for key, entry in data.items():
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("__type__") in ("classdef", "function"):
+            continue
+        value = _deserialize_value(entry, env)
+        if value is not _MISSING:
+            env[key] = value
