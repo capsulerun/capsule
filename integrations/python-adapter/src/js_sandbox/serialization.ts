@@ -163,8 +163,6 @@ export function deserializeValue(
 export function deserializeEnv(data: Record<string, SerializedValue>, env: Record<string, unknown>): void {
   const classes: Record<string, new (...args: unknown[]) => unknown> = {};
 
-  // First pass: exec all class and function definitions so they're available
-  // when instances are reconstructed in the second pass
   for (const [key, entry] of Object.entries(data)) {
     if (entry?.__type__ === "classdef") {
       const Cls = eval(`(${entry.__source__})`);
