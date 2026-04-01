@@ -63,7 +63,7 @@ await loadPythonSandbox();      // Warm up Python only
 await loadJavaScriptSandbox();  // Warm up JavaScript only
 ```
 
-### Sessions (Persistent State)
+## Sessions (Persistent State)
 
 Use `Session` to run code across multiple calls while preserving state. Each session gets an isolated workspace directory that is automatically cleaned up when the session ends.
 

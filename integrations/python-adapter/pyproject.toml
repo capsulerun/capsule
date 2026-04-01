@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "capsule-run-adapter"
-version = "0.3.3"
+version = "0.3.4"
 description = "Capsule adapter for Python applications — execute Python and JavaScript code in isolated WebAssembly sandboxes"
 license = { text = "Apache-2.0" }
 readme = "README.md"

@@ -161,18 +161,16 @@ export function deserializeValue(
 export function deserializeEnv(data: Record<string, SerializedValue>, env: Record<string, unknown>): void {
   const classes: Record<string, new (...args: unknown[]) => unknown> = {};
 
-  // First pass: exec all class and function definitions so they're available
-  // when instances are reconstructed in the second pass
   for (const [key, entry] of Object.entries(data)) {
     if (entry?.__type__ === "classdef") {
-      const Cls = eval(`(${entry.__source__})`);
+      const Cls = new Function("__env__", `with (__env__) { return (${entry.__source__}); }`)(env);
       env[key] = Cls;
       classes[key] = Cls;
     } else if (entry?.__type__ === "function") {
-      env[key] = eval(`(${entry.__source__})`);
+      env[key] = new Function("__env__", `with (__env__) { return (${entry.__source__}); }`)(env);
     } else if (entry?.__type__ === "instance") {
       if (!classes[entry.__class__]) {
-        const Cls = eval(`(${entry.__source__})`);
+        const Cls = new Function("__env__", `with (__env__) { return (${entry.__source__}); }`)(env);
         classes[entry.__class__] = Cls;
       }
     }

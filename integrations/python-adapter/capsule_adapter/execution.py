@@ -23,7 +23,7 @@ def _unwrap_result(raw: object) -> str:
         parsed = json.loads(raw)
     except (json.JSONDecodeError, ValueError):
         return raw
-    if not isinstance(parsed, dict):
+    if not isinstance(parsed, dict) or "success" not in parsed:
         return raw
     if "error" in parsed:
         err = parsed["error"]

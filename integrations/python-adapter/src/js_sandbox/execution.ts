@@ -90,15 +90,30 @@ function hoistDeclarations(code: string): string {
           lastTokenCanPrecedeRegex = true;
           continue;
         }
-        if (rest6 === "class " || rest6 === "class\t") {
-          let j = i + 6;
-          while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
-          const name = code.slice(i + 6, j);
-          if (name) {
-            out += `var ${name} = class ${name}`;
-            i = j;
-            lastTokenCanPrecedeRegex = false;
-            continue;
+        const atStatementStart = prevCh === "" || prevCh === "\n" || prevCh === ";" || prevCh === "}";
+        if (atStatementStart) {
+          if (rest6 === "class " || rest6 === "class\t") {
+            let j = i + 6;
+            while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
+            const name = code.slice(i + 6, j);
+            if (name) {
+              out += `var ${name} = class ${name}`;
+              i = j;
+              lastTokenCanPrecedeRegex = false;
+              continue;
+            }
+          }
+          const rest9 = code.slice(i, i + 9);
+          if (rest9 === "function " || rest9 === "function\t" || rest9 === "function\n") {
+            let j = i + 9;
+            while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
+            const name = code.slice(i + 9, j);
+            if (name) {
+              out += `var ${name} = function ${name}`;
+              i = j;
+              lastTokenCanPrecedeRegex = false;
+              continue;
+            }
           }
         }
       }
@@ -143,14 +158,17 @@ export function _executeCode(code: string, env: Record<string, unknown>): unknow
     }
 
     if (!executed) {
-      const splitAt = Math.max(code.lastIndexOf(";"), code.lastIndexOf("\n"));
+      const trimmed = code.trimEnd();
+      const splitAt = Math.max(trimmed.lastIndexOf(";"), trimmed.lastIndexOf("\n"));
       if (splitAt >= 0) {
-        const last = code.slice(splitAt + 1).trim();
+        const last = trimmed.slice(splitAt + 1).trim();
         if (last) {
           try {
-            const before = code.slice(0, splitAt + 1);
-            const fn = new Function("__env__", `with (__env__) { ${before} return (${last}); }`);
-            result = fn(proxy);
+            const before = trimmed.slice(0, splitAt + 1);
+            const fn = new Function("__env__", `with (__env__) { ${before}\n__capsule_result__ = (${last}); }`);
+            fn(proxy);
+            result = env.__capsule_result__;
+            delete env.__capsule_result__;
             executed = true;
           } catch {}
         }

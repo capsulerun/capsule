@@ -3,7 +3,6 @@ function hoistDeclarations(code: string): string {
   let i = 0;
   let out = "";
   let lastTokenCanPrecedeRegex = true;
-  let atStatementStart = true;
 
   while (i < code.length) {
     const ch = code[i];
@@ -66,15 +65,11 @@ function hoistDeclarations(code: string): string {
       continue;
     }
 
-    const wasAtStatementStart = atStatementStart;
-
-    if (ch === "{" || ch === "(" || ch === "[") { depth++; lastTokenCanPrecedeRegex = true; atStatementStart = false; }
-    else if (ch === "}" || ch === ")" || ch === "]") { depth--; lastTokenCanPrecedeRegex = ch !== ")" && ch !== "]"; atStatementStart = ch === "}" && depth === 0; }
-    else if (ch === ";" || ch === "\n") { lastTokenCanPrecedeRegex = true; atStatementStart = true; }
-    else if (ch === ",") { lastTokenCanPrecedeRegex = true; atStatementStart = false; }
-    else if (ch === "=" || ch === "+" || ch === "-" || ch === "*" || ch === "%" || ch === "!" || ch === "&" || ch === "|" || ch === "?" || ch === ":") { lastTokenCanPrecedeRegex = true; atStatementStart = false; }
-    else if (/[a-zA-Z0-9_$]/.test(ch)) { lastTokenCanPrecedeRegex = false; atStatementStart = false; }
-    else if (ch === " " || ch === "\t") { /* whitespace: preserve atStatementStart */ }
+    if (ch === "{" || ch === "(" || ch === "[") { depth++; lastTokenCanPrecedeRegex = true; }
+    else if (ch === "}" || ch === ")" || ch === "]") { depth--; lastTokenCanPrecedeRegex = ch !== ")" && ch !== "]"; }
+    else if (ch === ";" || ch === ",") { lastTokenCanPrecedeRegex = true; }
+    else if (ch === "=" || ch === "+" || ch === "-" || ch === "*" || ch === "%" || ch === "!" || ch === "&" || ch === "|" || ch === "?" || ch === ":") { lastTokenCanPrecedeRegex = true; }
+    else if (/[a-zA-Z0-9_$]/.test(ch)) { lastTokenCanPrecedeRegex = false; }
 
     if (depth === 0) {
       const prevCh = out.length > 0 ? out[out.length - 1] : "";
@@ -83,7 +78,6 @@ function hoistDeclarations(code: string): string {
       if (notIdent) {
         const rest4 = code.slice(i, i + 4);
         const rest6 = code.slice(i, i + 6);
-        const rest9 = code.slice(i, i + 9);
         if (rest4 === "let " || rest4 === "let\t" || rest4 === "let\n") {
           out += "var" + code[i + 3];
           i += 4;
@@ -96,27 +90,30 @@ function hoistDeclarations(code: string): string {
           lastTokenCanPrecedeRegex = true;
           continue;
         }
-        if (rest6 === "class " || rest6 === "class\t") {
-          let j = i + 6;
-          while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
-          const name = code.slice(i + 6, j);
-          if (name) {
-            out += `var ${name} = class ${name}`;
-            i = j;
-            lastTokenCanPrecedeRegex = false;
-            continue;
+        const atStatementStart = prevCh === "" || prevCh === "\n" || prevCh === ";" || prevCh === "}";
+        if (atStatementStart) {
+          if (rest6 === "class " || rest6 === "class\t") {
+            let j = i + 6;
+            while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
+            const name = code.slice(i + 6, j);
+            if (name) {
+              out += `var ${name} = class ${name}`;
+              i = j;
+              lastTokenCanPrecedeRegex = false;
+              continue;
+            }
           }
-        }
-        if (wasAtStatementStart && (rest9 === "function " || rest9 === "function\t" || rest9 === "function\n")) {
-          let j = i + 9;
-          while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
-          const name = code.slice(i + 9, j);
-          if (name) {
-            out += `var ${name} = function ${name}`;
-            i = j;
-            lastTokenCanPrecedeRegex = false;
-            atStatementStart = false;
-            continue;
+          const rest9 = code.slice(i, i + 9);
+          if (rest9 === "function " || rest9 === "function\t" || rest9 === "function\n") {
+            let j = i + 9;
+            while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
+            const name = code.slice(i + 9, j);
+            if (name) {
+              out += `var ${name} = function ${name}`;
+              i = j;
+              lastTokenCanPrecedeRegex = false;
+              continue;
+            }
           }
         }
       }
@@ -161,14 +158,17 @@ export function _executeCode(code: string, env: Record<string, unknown>): unknow
     }
 
     if (!executed) {
-      const splitAt = Math.max(code.lastIndexOf(";"), code.lastIndexOf("\n"));
+      const trimmed = code.trimEnd();
+      const splitAt = Math.max(trimmed.lastIndexOf(";"), trimmed.lastIndexOf("\n"));
       if (splitAt >= 0) {
-        const last = code.slice(splitAt + 1).trim();
+        const last = trimmed.slice(splitAt + 1).trim();
         if (last) {
           try {
-            const before = code.slice(0, splitAt + 1);
-            const fn = new Function("__env__", `with (__env__) { ${before} return (${last}); }`);
-            result = fn(proxy);
+            const before = trimmed.slice(0, splitAt + 1);
+            const fn = new Function("__env__", `with (__env__) { ${before}\n__capsule_result__ = (${last}); }`);
+            fn(proxy);
+            result = env.__capsule_result__;
+            delete env.__capsule_result__;
             executed = true;
           } catch {}
         }

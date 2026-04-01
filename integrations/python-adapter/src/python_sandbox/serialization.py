@@ -5,6 +5,7 @@ import types
 
 _MISSING = object()
 
+
 def _serialize_env(env: dict) -> dict:
     out = {}
     for key, val in env.items():
@@ -21,7 +22,7 @@ def _serialize_value(val):
         return {"__type__": "primitive", "value": val}
 
     if isinstance(val, float):
-        if val != val:  # NaN
+        if val != val:
             return {"__type__": "nan"}
         if val == float("inf"):
             return {"__type__": "infinity", "sign": 1}
@@ -73,6 +74,9 @@ def _serialize_value(val):
             return {"__type__": "classdef", "__source__": source}
         return None
 
+    if isinstance(val, types.ModuleType):
+        return {"__type__": "module", "name": val.__name__}
+
     if isinstance(val, (types.FunctionType, types.MethodType)):
         source = getattr(val, "__source__", None)
         if source:
@@ -123,6 +127,10 @@ def _deserialize_value(entry: dict, env: dict):
         return set(_deserialize_list(entry["value"], env))
     if t == "dict":
         return _deserialize_dict(entry["value"], env)
+
+    if t == "module":
+        import importlib
+        return importlib.import_module(entry["name"])
 
     if t == "classdef":
         source = entry["__source__"]
