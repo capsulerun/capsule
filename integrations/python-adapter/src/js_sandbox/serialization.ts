@@ -1,3 +1,5 @@
+import { MODULE_VALUES, TRANSIENT_KEYS, MODULE_REGISTRY } from "./execution";
+
 export type SerializedValue =
   | { __type__: "primitive"; value: string | number | boolean | null }
   | { __type__: "undefined" }
@@ -13,6 +15,7 @@ export type SerializedValue =
   | { __type__: "classdef"; __source__: string }
   | { __type__: "function"; __source__: string }
   | { __type__: "instance"; __class__: string; __source__: string; __dict__: Record<string, SerializedValue> }
+  | { __type__: "module"; name: string }  // use for import/require() modules
   | null;
 
 export function serializeValue(val: unknown): SerializedValue {
@@ -96,15 +99,28 @@ export function serializeValue(val: unknown): SerializedValue {
   return null;
 }
 
+const MODULE_VALUE_TO_NAME: Map<unknown, string> = new Map(
+  Object.entries(MODULE_REGISTRY)
+    .filter(([name]) => !name.startsWith("node:"))
+    .map(([name, val]) => [val, name])
+);
+
 export function serializeEnv(env: Record<string, unknown>): Record<string, SerializedValue> {
   const out: Record<string, SerializedValue> = {};
   for (const [key, val] of Object.entries(env)) {
     if (key.startsWith("__")) continue;
+    if (TRANSIENT_KEYS.has(key)) continue;
+    if (MODULE_VALUES.has(val)) {
+      const name = MODULE_VALUE_TO_NAME.get(val);
+      if (name) out[key] = { __type__: "module", name };
+      continue;
+    }
     const s = serializeValue(val);
     if (s !== null) out[key] = s;
   }
   return out;
 }
+
 
 export function deserializeValue(
   entry: SerializedValue,
@@ -153,6 +169,8 @@ export function deserializeValue(
       }
       return instance;
     }
+    case "module":
+      return MODULE_REGISTRY[entry.name];
     default:
       return undefined;
   }

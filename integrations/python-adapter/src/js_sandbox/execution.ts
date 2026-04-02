@@ -1,3 +1,7 @@
+import { fs, path, os, process } from "@capsule-run/sdk";
+
+const fsPromises = fs.promises;
+
 function hoistDeclarations(code: string): string {
   let depth = 0;
   let i = 0;
@@ -126,8 +130,41 @@ function hoistDeclarations(code: string): string {
   return out;
 }
 
+/**
+ * Maps module names user code can import to their sandbox equivalents.
+ * These are the WASI polyfills from the capsule SDK.
+ */
+export const MODULE_REGISTRY: Record<string, unknown> = {
+  "fs":               fs,
+  "fs/promises":      fsPromises,
+  "node:fs":          fs,
+  "node:fs/promises": fsPromises,
+  "path":             path,
+  "node:path":        path,
+  "os":               os,
+  "node:os":          os,
+  "process":          process,
+  "node:process":     process,
+};
+
+export const MODULE_VALUES: Set<unknown> = new Set(Object.values(MODULE_REGISTRY));
+export const TRANSIENT_KEYS: Set<string> = new Set(["__require__", "require"]);
+
+
+function rewriteImports(code: string): string {
+  return code.replace(
+    /^[ \t]*import\s+(?:(\*\s+as\s+\w+|\{[^}]*\}|\w+)\s+from\s+)?['"]([^'"]+)['"]\s*;?/gm,
+    (_, binding: string | undefined, mod: string) => {
+      if (!binding) return `__require__('${mod}');`;
+      const normalized = binding.replace(/^\*\s+as\s+/, "");
+      return `var ${normalized} = __require__('${mod}');`;
+    }
+  );
+}
+
 export function _executeCode(code: string, env: Record<string, unknown>): unknown {
-  code = hoistDeclarations(code);
+  code = rewriteImports(hoistDeclarations(code));
+
   const capturedOutput: string[] = [];
   const originalLog = console.log;
 
@@ -136,6 +173,12 @@ export function _executeCode(code: string, env: Record<string, unknown>): unknow
   };
 
   try {
+    env.__require__ = (mod: string): unknown => {
+      if (mod in MODULE_REGISTRY) return MODULE_REGISTRY[mod];
+      throw new Error(`Cannot import '${mod}': module is not available in the sandbox`);
+    };
+    env.require = env.__require__;
+
     const proxy = new Proxy(env, {
       has(_t, _k) { return true; },
       get(t, k) {
