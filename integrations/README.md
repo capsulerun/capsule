@@ -12,9 +12,6 @@ This directory contains integrations for Capsule with popular AI frameworks and 
 ## External Integrations
 
 - [langchain-capsule](https://github.com/mavdol/langchain-capsule) - LangChain integration
-- [smolagents-capsule](https://github.com/mavdol/smolagents-capsule) - smolagents integration
-- [crewAI-capsule](https://github.com/mavdol/crewAI-capsule) - crewAI integration
-- [mastra-capsule](https://github.com/mavdol/mastra-capsule) - Mastra integration
 
 ---
 
