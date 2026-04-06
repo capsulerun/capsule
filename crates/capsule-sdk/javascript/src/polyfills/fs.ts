@@ -297,134 +297,302 @@ export function readdir(
 }
 
 // ---------------------------------------------------------------------------
-// Sync stubs
-// These functions cannot be implemented in a WASM/WASI sandbox because there
-// is no way to block the JS event loop synchronously.
+// Sync implementations
+// wasi:filesystem/types@0.2.0 descriptor methods (openAt, read, write, stat,
+// readDirectory, etc.) are direct component-model imports — they are
+// synchronous from JS's perspective. No asyncify, no event-loop blocking.
 // ---------------------------------------------------------------------------
 
-function notSupported(name: string, asyncAlt: string): never {
-    const err = new Error(
-        `fs.${name} is not supported in the WASM/WASI sandbox. ` +
-        `Use ${asyncAlt} instead.`
-    ) as Error & { code: string };
-    err.code = 'ERR_NOT_SUPPORTED';
-    throw err;
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.readFile()` or `fs.readFile()` instead.
- */
-export function readFileSync(_path: string, _options?: ReadFileOptions | Encoding): never {
-    notSupported('readFileSync', 'fs.promises.readFile()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.writeFile()` or `fs.writeFile()` instead.
- */
-export function writeFileSync(_path: string, _data: string | Uint8Array, _options?: WriteFileOptions | Encoding): never {
-    notSupported('writeFileSync', 'fs.promises.writeFile()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.appendFile()` instead.
- */
-export function appendFileSync(_path: string, _data: string | Uint8Array, _options?: WriteFileOptions | Encoding): never {
-    notSupported('appendFileSync', 'fs.promises.appendFile()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.readdir()` or `fs.readdir()` instead.
- */
-export function readdirSync(_path: string, _options?: any): never {
-    notSupported('readdirSync', 'fs.promises.readdir()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.stat()` instead.
- */
-export function statSync(_path: string): never {
-    notSupported('statSync', 'fs.promises.stat()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.stat()` instead (lstat behaves like stat in WASI — no symlinks).
- */
-export function lstatSync(_path: string): never {
-    notSupported('lstatSync', 'fs.promises.stat()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.mkdir()` or `fs.mkdir()` instead.
- */
-export function mkdirSync(_path: string, _options?: MkdirOptions): never {
-    notSupported('mkdirSync', 'fs.promises.mkdir()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.rmdir()` or `fs.rmdir()` instead.
- */
-export function rmdirSync(_path: string, _options?: RmdirOptions): never {
-    notSupported('rmdirSync', 'fs.promises.rmdir()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.rm()` or `fs.rm()` instead.
- */
-export function rmSync(_path: string, _options?: RmOptions): never {
-    notSupported('rmSync', 'fs.promises.rm()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.unlink()` or `fs.unlink()` instead.
- */
-export function unlinkSync(_path: string): never {
-    notSupported('unlinkSync', 'fs.promises.unlink()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.copyFile()` or `fs.copyFile()` instead.
- */
-export function copyFileSync(_src: string, _dest: string): never {
-    notSupported('copyFileSync', 'fs.promises.copyFile()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.rename()` instead.
- */
-export function renameSync(_oldPath: string, _newPath: string): never {
-    notSupported('renameSync', 'fs.promises.rename()');
-}
-
-/**
- * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
- * Use `fs.promises.access()` instead.
- */
-export function accessSync(_path: string, _mode?: number): never {
-    notSupported('accessSync', 'fs.promises.access()');
-}
-
-/**
- * NOT SUPPORTED — always returns false.
- * Use `fs.promises.access()` to check file existence asynchronously.
- */
-export function existsSync(_path: string): boolean {
-    console.warn(
-        'fs.existsSync is not supported in the WASM/WASI sandbox and always returns false. ' +
-        'Use fs.promises.access() to check file existence asynchronously.'
+function enoent(path: string): Error {
+    return Object.assign(
+        new Error(`ENOENT: no such file or directory, open '${path}'`),
+        { code: 'ENOENT' }
     );
-    return false;
+}
+
+/**
+ * Read file contents synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function readFileSync(path: string, options?: ReadFileOptions | Encoding): string | Uint8Array {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+
+    try {
+        const fd = resolved.dir.openAt({ symlinkFollow: false }, resolved.relativePath, {}, { read: true });
+        const stat = fd.stat();
+        const [data] = fd.read(stat.size, BigInt(0));
+        const encoding = typeof options === 'string' ? options : options?.encoding;
+        return (encoding === 'utf8' || encoding === 'utf-8') ? new TextDecoder().decode(data) : data;
+    } catch (e) {
+        if (e instanceof Error && (e as any).code) throw e;
+        throw Object.assign(new Error(`ENOENT: no such file or directory, open '${path}'`), { code: 'ENOENT' });
+    }
+}
+
+/**
+ * Write data to a file synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function writeFileSync(path: string, data: string | Uint8Array, _options?: WriteFileOptions | Encoding): void {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+
+    const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+    try {
+        const fd = resolved.dir.openAt(
+            { symlinkFollow: false },
+            resolved.relativePath,
+            { create: true, truncate: true },
+            { write: true, mutateDirectory: true }
+        );
+        fd.write(bytes, BigInt(0));
+    } catch (e) {
+        throw new Error(`ENOENT: no such file or directory, open '${path}'`);
+    }
+}
+
+/**
+ * Append data to a file synchronously, creating it if it doesn't exist.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function appendFileSync(path: string, data: string | Uint8Array, _options?: WriteFileOptions | Encoding): void {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+
+    const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+    try {
+        const fd = resolved.dir.openAt(
+            { symlinkFollow: false },
+            resolved.relativePath,
+            { create: true },
+            { write: true, mutateDirectory: true }
+        );
+        const stat = fd.stat();
+        fd.write(bytes, stat.size);
+    } catch (e) {
+        throw new Error(`Failed to append to file '${path}': ${e}`);
+    }
+}
+
+/**
+ * Read directory contents synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function readdirSync(path: string, _options?: any): string[] {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+
+    try {
+        let targetDir = resolved.dir;
+        if (resolved.relativePath !== '.') {
+            targetDir = resolved.dir.openAt(
+                { symlinkFollow: false },
+                resolved.relativePath,
+                { directory: true },
+                { read: true }
+            );
+        }
+        const stream = targetDir.readDirectory();
+        const entries: string[] = [];
+        let entry;
+        while ((entry = stream.readDirectoryEntry()) && entry) {
+            if (entry.name) entries.push(entry.name);
+        }
+        return entries;
+    } catch (e) {
+        throw Object.assign(new Error(`ENOENT: no such file or directory, scandir '${path}'`), { code: 'ENOENT' });
+    }
+}
+
+export interface StatResult {
+    isFile: () => boolean;
+    isDirectory: () => boolean;
+    isSymbolicLink: () => boolean;
+    size: number;
+    mtimeMs: number;
+    atimeMs: number;
+    ctimeMs: number;
+    mode: number;
+}
+
+function makeStatResult(type: 'file' | 'directory' | 'notfound', size: bigint = BigInt(0)): StatResult {
+    return {
+        isFile: () => type === 'file',
+        isDirectory: () => type === 'directory',
+        isSymbolicLink: () => false,
+        size: Number(size),
+        mtimeMs: 0,
+        atimeMs: 0,
+        ctimeMs: 0,
+        mode: type === 'directory' ? 0o40755 : 0o100644,
+    };
+}
+
+/**
+ * Get file stats synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function statSync(path: string): StatResult {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+
+    try {
+        const fd = resolved.dir.openAt({ symlinkFollow: false }, resolved.relativePath, {}, { read: true });
+        const s = fd.stat();
+        const type = s.type === 'directory' ? 'directory' : 'file';
+        return makeStatResult(type, s.size);
+    } catch (e) {
+        throw Object.assign(new Error(`ENOENT: no such file or directory, stat '${path}'`), { code: 'ENOENT' });
+    }
+}
+
+/**
+ * Get file stats synchronously (no symlink follow — same as stat in WASI 0.2).
+ */
+export function lstatSync(path: string): StatResult {
+    return statSync(path);
+}
+
+/**
+ * Create a directory synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function mkdirSync(path: string, options?: MkdirOptions): void {
+    if (options?.recursive) {
+        const normalized = normalizePath(path);
+        const parts = normalized.split('/').filter(Boolean);
+        for (let i = 1; i <= parts.length; i++) {
+            const partial = parts.slice(0, i).join('/');
+            const resolved = resolvePath(partial);
+            if (!resolved) continue;
+            try { resolved.dir.createDirectoryAt(resolved.relativePath); } catch { /* already exists */ }
+        }
+    } else {
+        const resolved = resolvePath(path);
+        if (!resolved) throw enoent(path);
+        try {
+            resolved.dir.createDirectoryAt(resolved.relativePath);
+        } catch (e) {
+            throw Object.assign(new Error(`EEXIST: file already exists, mkdir '${path}'`), { code: 'EEXIST' });
+        }
+    }
+}
+
+/**
+ * Remove a directory synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function rmdirSync(path: string, _options?: RmdirOptions): void {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+    try {
+        resolved.dir.removeDirectoryAt(resolved.relativePath);
+    } catch (e) {
+        throw Object.assign(new Error(`ENOENT: no such file or directory, rmdir '${path}'`), { code: 'ENOENT' });
+    }
+}
+
+/**
+ * Remove a file or directory synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function rmSync(path: string, options?: RmOptions): void {
+    const resolved = resolvePath(path);
+    if (!resolved) {
+        if (options?.force) return;
+        throw enoent(path);
+    }
+
+    try {
+        const fd = resolved.dir.openAt({ symlinkFollow: false }, resolved.relativePath, {}, { read: true });
+        const s = fd.stat();
+        if (s.type === 'directory') {
+            if (!options?.recursive) {
+                throw Object.assign(
+                    new Error(`EISDIR: illegal operation on a directory, rm '${path}'`),
+                    { code: 'EISDIR' }
+                );
+            }
+            resolved.dir.removeDirectoryAt(resolved.relativePath);
+        } else {
+            resolved.dir.unlinkFileAt(resolved.relativePath);
+        }
+    } catch (e) {
+        if (options?.force) return;
+        if (e instanceof Error && (e as any).code) throw e;
+        throw enoent(path);
+    }
+}
+
+/**
+ * Remove a file synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function unlinkSync(path: string): void {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+    try {
+        resolved.dir.unlinkFileAt(resolved.relativePath);
+    } catch (e) {
+        throw Object.assign(new Error(`ENOENT: no such file or directory, unlink '${path}'`), { code: 'ENOENT' });
+    }
+}
+
+/**
+ * Copy a file synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function copyFileSync(src: string, dest: string): void {
+    const data = readFileSync(src) as Uint8Array;
+    writeFileSync(dest, data);
+}
+
+/**
+ * Rename a file or directory synchronously.
+ * Falls back to copy+delete since wasi:filesystem/types@0.2.0
+ * does not expose a rename/link-at in the current WIT binding.
+ */
+export function renameSync(oldPath: string, newPath: string): void {
+    try {
+        const data = readFileSync(oldPath);
+        writeFileSync(newPath, data as Uint8Array);
+        unlinkSync(oldPath);
+    } catch (e) {
+        throw Object.assign(
+            new Error(`ENOENT: no such file or directory, rename '${oldPath}' -> '${newPath}'`),
+            { code: 'ENOENT' }
+        );
+    }
+}
+
+/**
+ * Check file accessibility synchronously.
+ * Throws if the path does not exist.
+ */
+export function accessSync(path: string, _mode?: number): void {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+    try {
+        resolved.dir.openAt({ symlinkFollow: false }, resolved.relativePath, {}, { read: true });
+    } catch (e) {
+        throw Object.assign(new Error(`ENOENT: no such file or directory, access '${path}'`), { code: 'ENOENT' });
+    }
+}
+
+/**
+ * Check if a path exists synchronously.
+ * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
+ */
+export function existsSync(path: string): boolean {
+    const resolved = resolvePath(path);
+    if (!resolved) return false;
+    try {
+        resolved.dir.openAt({ symlinkFollow: false }, resolved.relativePath, {}, { read: true });
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -656,15 +824,15 @@ export const promises = {
         await unlink(path);
     },
 
-    async stat(path: string): Promise<{ isFile: () => boolean; isDirectory: () => boolean }> {
+    async stat(path: string): Promise<StatResult> {
         const kind = await statPath(path);
         if (kind === 'notfound') {
-            throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
+            throw Object.assign(
+                new Error(`ENOENT: no such file or directory, stat '${path}'`),
+                { code: 'ENOENT' }
+            );
         }
-        return {
-            isFile: () => kind === 'file',
-            isDirectory: () => kind === 'directory',
-        };
+        return makeStatResult(kind);
     },
 
     async rmdir(path: string, options?: RmdirOptions): Promise<void> {

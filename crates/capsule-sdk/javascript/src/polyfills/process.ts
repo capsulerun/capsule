@@ -9,6 +9,16 @@ declare const globalThis: {
         getArguments(): string[];
         initialCwd(): string | null;
     };
+    'wasi:cli/stdin': {
+        getStdin(): {
+            blockingRead(len: bigint): [Uint8Array, boolean];
+        };
+    };
+    'wasi:cli/stdout': {
+        getStdout(): {
+            blockingWriteAndFlush(buf: Uint8Array): void;
+        };
+    };
 };
 
 /**
@@ -178,24 +188,88 @@ const process = {
     },
 
     /**
-     * Standard streams (not fully implemented)
+     * Standard input — backed by wasi:cli/stdin@0.2.0.
+     * Exposes a minimal EventEmitter-compatible Readable so that
+     * MCP's StdioServerTransport can call stdin.on('data', ...).
+     */
+    get stdin(): any {
+        const listeners: Array<(chunk: Uint8Array | string) => void> = [];
+        let reading = false;
+
+        function startReading() {
+            if (reading) return;
+            reading = true;
+            (async () => {
+                try {
+                    const api = globalThis['wasi:cli/stdin'];
+                    if (!api) return;
+                    const stream = api.getStdin();
+                    while (true) {
+                        const [chunk, done] = stream.blockingRead(BigInt(4096));
+                        if (chunk && chunk.length > 0) {
+                            const buf = chunk;
+                            listeners.forEach(fn => fn(buf));
+                        }
+                        if (done) {
+                            endListeners.forEach(fn => fn());
+                            break;
+                        }
+                    }
+                } catch { /* stdin not available */ }
+            })();
+        }
+
+        const endListeners: Array<() => void> = [];
+
+        return {
+            isTTY: false,
+            readable: true,
+            on(event: string, fn: (...args: any[]) => void) {
+                if (event === 'data') { listeners.push(fn); startReading(); }
+                if (event === 'end') { endListeners.push(fn); }
+                return this;
+            },
+            once(event: string, fn: (...args: any[]) => void) {
+                return this.on(event, fn);
+            },
+            pause() { return this; },
+            resume() { startReading(); return this; },
+            pipe(dest: any) { return dest; },
+            setEncoding(_enc: string) { return this; },
+        };
+    },
+
+    /**
+     * Standard output — backed by wasi:cli/stdout@0.2.0.
      */
     get stdout(): any {
         return {
-            write: (data: string) => console.log(data),
             isTTY: false,
+            write(data: string | Uint8Array, _enc?: string, cb?: () => void): boolean {
+                try {
+                    const api = globalThis['wasi:cli/stdout'];
+                    if (api) {
+                        const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+                        api.getStdout().blockingWriteAndFlush(bytes);
+                    } else {
+                        console.log(typeof data === 'string' ? data : new TextDecoder().decode(data));
+                    }
+                } catch {
+                    console.log(typeof data === 'string' ? data : new TextDecoder().decode(data));
+                }
+                cb?.();
+                return true;
+            },
+            end(data?: string | Uint8Array, cb?: () => void): void {
+                if (data) this.write(data);
+                cb?.();
+            },
         };
     },
 
     get stderr(): any {
         return {
             write: (data: string) => console.error(data),
-            isTTY: false,
-        };
-    },
-
-    get stdin(): any {
-        return {
             isTTY: false,
         };
     },
