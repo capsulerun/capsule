@@ -296,11 +296,134 @@ export function readdir(
         .catch((err) => cb?.(err instanceof Error ? err : new Error(String(err))));
 }
 
+// ---------------------------------------------------------------------------
+// Sync stubs
+// These functions cannot be implemented in a WASM/WASI sandbox because there
+// is no way to block the JS event loop synchronously.
+// ---------------------------------------------------------------------------
+
+function notSupported(name: string, asyncAlt: string): never {
+    const err = new Error(
+        `fs.${name} is not supported in the WASM/WASI sandbox. ` +
+        `Use ${asyncAlt} instead.`
+    ) as Error & { code: string };
+    err.code = 'ERR_NOT_SUPPORTED';
+    throw err;
+}
+
 /**
- * Check if file/directory exists (sync-style, limited in WASM)
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.readFile()` or `fs.readFile()` instead.
+ */
+export function readFileSync(_path: string, _options?: ReadFileOptions | Encoding): never {
+    notSupported('readFileSync', 'fs.promises.readFile()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.writeFile()` or `fs.writeFile()` instead.
+ */
+export function writeFileSync(_path: string, _data: string | Uint8Array, _options?: WriteFileOptions | Encoding): never {
+    notSupported('writeFileSync', 'fs.promises.writeFile()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.appendFile()` instead.
+ */
+export function appendFileSync(_path: string, _data: string | Uint8Array, _options?: WriteFileOptions | Encoding): never {
+    notSupported('appendFileSync', 'fs.promises.appendFile()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.readdir()` or `fs.readdir()` instead.
+ */
+export function readdirSync(_path: string, _options?: any): never {
+    notSupported('readdirSync', 'fs.promises.readdir()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.stat()` instead.
+ */
+export function statSync(_path: string): never {
+    notSupported('statSync', 'fs.promises.stat()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.stat()` instead (lstat behaves like stat in WASI — no symlinks).
+ */
+export function lstatSync(_path: string): never {
+    notSupported('lstatSync', 'fs.promises.stat()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.mkdir()` or `fs.mkdir()` instead.
+ */
+export function mkdirSync(_path: string, _options?: MkdirOptions): never {
+    notSupported('mkdirSync', 'fs.promises.mkdir()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.rmdir()` or `fs.rmdir()` instead.
+ */
+export function rmdirSync(_path: string, _options?: RmdirOptions): never {
+    notSupported('rmdirSync', 'fs.promises.rmdir()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.rm()` or `fs.rm()` instead.
+ */
+export function rmSync(_path: string, _options?: RmOptions): never {
+    notSupported('rmSync', 'fs.promises.rm()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.unlink()` or `fs.unlink()` instead.
+ */
+export function unlinkSync(_path: string): never {
+    notSupported('unlinkSync', 'fs.promises.unlink()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.copyFile()` or `fs.copyFile()` instead.
+ */
+export function copyFileSync(_src: string, _dest: string): never {
+    notSupported('copyFileSync', 'fs.promises.copyFile()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.rename()` instead.
+ */
+export function renameSync(_oldPath: string, _newPath: string): never {
+    notSupported('renameSync', 'fs.promises.rename()');
+}
+
+/**
+ * NOT SUPPORTED — throws ERR_NOT_SUPPORTED.
+ * Use `fs.promises.access()` instead.
+ */
+export function accessSync(_path: string, _mode?: number): never {
+    notSupported('accessSync', 'fs.promises.access()');
+}
+
+/**
+ * NOT SUPPORTED — always returns false.
+ * Use `fs.promises.access()` to check file existence asynchronously.
  */
 export function existsSync(_path: string): boolean {
-    console.warn('fs.existsSync: Cannot implement true sync in WASM. Use fs.access instead.');
+    console.warn(
+        'fs.existsSync is not supported in the WASM/WASI sandbox and always returns false. ' +
+        'Use fs.promises.access() to check file existence asynchronously.'
+    );
     return false;
 }
 
@@ -566,16 +689,32 @@ export const promises = {
 };
 
 const fs = {
+    // Async / callback
     readFile,
     writeFile,
     readdir,
-    existsSync,
     unlink,
     rmdir,
     rm,
     mkdir,
     copyFile,
     cp,
+    // Sync stubs (throw ERR_NOT_SUPPORTED)
+    readFileSync,
+    writeFileSync,
+    appendFileSync,
+    readdirSync,
+    statSync,
+    lstatSync,
+    mkdirSync,
+    rmdirSync,
+    rmSync,
+    unlinkSync,
+    copyFileSync,
+    renameSync,
+    accessSync,
+    existsSync,
+    // Promises API
     promises,
 };
 
