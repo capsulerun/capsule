@@ -205,7 +205,8 @@ export {{ incomingHandler }};
         let process_polyfill_path = sdk_path_normalized.join("dist/polyfills/process.js");
         let fs_polyfill_path = sdk_path_normalized.join("dist/polyfills/fs.js");
 
-        let esbuild_output = Self::npx_command()
+        let mut esbuild_cmd = Self::npx_command();
+        esbuild_cmd
             .arg("esbuild")
             .arg(&wrapper_path_normalized)
             .arg("--bundle")
@@ -215,7 +216,6 @@ export {{ incomingHandler }};
             .arg("--external:capsule:host/api")
             .arg("--external:wasi:filesystem/*")
             .arg("--external:wasi:cli/*")
-            .arg("--external:wasi:http/*")
             .arg(format!("--inject:{}", process_polyfill_path.display()))
             .arg(format!("--alias:os={}", os_polyfill_path.display()))
             .arg(format!("--alias:node:os={}", os_polyfill_path.display()))
@@ -240,25 +240,42 @@ export {{ incomingHandler }};
                 sdk_path_normalized
                     .join("dist/polyfills/fs-promises.js")
                     .display()
-            ))
-            // unenv handles: buffer, events, path, stream, url, util, crypto, etc.
-            .arg(format!("--alias:unenv={}", unenv_path.display()))
-            .arg("--alias:node:buffer=unenv/runtime/node/buffer")
-            .arg("--alias:buffer=unenv/runtime/node/buffer")
-            .arg("--alias:node:events=unenv/runtime/node/events")
-            .arg("--alias:events=unenv/runtime/node/events")
-            .arg("--alias:node:path=unenv/runtime/node/path")
-            .arg("--alias:path=unenv/runtime/node/path")
-            .arg("--alias:node:stream=unenv/runtime/node/stream")
-            .arg("--alias:stream=unenv/runtime/node/stream")
-            .arg("--alias:node:stream/web=unenv/runtime/node/stream/web")
-            .arg("--alias:stream/web=unenv/runtime/node/stream/web")
-            .arg("--alias:node:url=unenv/runtime/node/url")
-            .arg("--alias:url=unenv/runtime/node/url")
-            .arg("--alias:node:util=unenv/runtime/node/util")
-            .arg("--alias:util=unenv/runtime/node/util")
-            .arg("--alias:node:crypto=unenv/runtime/node/crypto")
-            .arg("--alias:crypto=unenv/runtime/node/crypto")
+            ));
+
+        esbuild_cmd.arg(format!("--alias:unenv={}", unenv_path.display()));
+
+        let unenv_node_dir = unenv_path.join("dist/runtime/node");
+        let mut stack = vec![(unenv_node_dir, String::new())];
+        while let Some((dir, prefix)) = stack.pop() {
+            let Ok(entries) = fs::read_dir(&dir) else {
+                continue;
+            };
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                    continue;
+                };
+
+                if path.is_file() {
+                    if let Some(stripped) = name.strip_suffix(".mjs") {
+                        let mod_name = format!("{}{}", prefix, stripped);
+                        if !matches!(mod_name.as_str(), "os" | "process" | "fs" | "fs/promises") {
+                            esbuild_cmd.arg(format!(
+                                "--alias:node:{}={}",
+                                mod_name,
+                                path.display()
+                            ));
+                            esbuild_cmd.arg(format!("--alias:{}={}", mod_name, path.display()));
+                        }
+                    }
+                } else {
+                    stack.push((path.clone(), format!("{}{}/", prefix, name)));
+                }
+            }
+        }
+
+        let esbuild_output = esbuild_cmd
             .arg(format!("--outfile={}", bundled_path_normalized.display()))
             .current_dir(&sdk_path_normalized)
             .stdout(Stdio::piped())

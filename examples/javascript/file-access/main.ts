@@ -1,5 +1,5 @@
 import { task } from "@capsule-run/sdk";
-import fs from "fs/promises";
+import fs from "fs";
 
 /**
  * Sub-task with restricted file access.
@@ -9,10 +9,10 @@ export const restrictedWriter = task({
     name: "restricted_writer",
     allowedFiles: [{
         path: "./data",
-        mode: "read-only"
+        mode: "read-write"
     }]
 }, async (content: string) => {
-    await fs.writeFile("./data/output.txt", content);
+    fs.writeFileSync("./data/output.txt", content);
     return { written: true };
 });
 
@@ -23,7 +23,7 @@ export const main = task({ name: "main", allowedFiles: [{
     path: "./data",
     mode: "read-only"
 }] }, async () => {
-    const content = await fs.readFile("./data/input.txt", "utf8") as string;
+    const content = fs.readFileSync("./data/input.txt", "utf8") as string;
     const lines = content.trim().split("\n");
     const lineCount = lines.length;
 

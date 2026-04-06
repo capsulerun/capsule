@@ -1,5 +1,5 @@
 import { task } from "@capsule-run/sdk";
-import fs from "fs/promises";
+import fs from "fs";
 import OpenAI from "openai";
 
 const getDialogueLines = task({
@@ -7,7 +7,7 @@ const getDialogueLines = task({
     compute: "LOW",
     allowedFiles: ["source"]
 }, async (): Promise<{lines: string[]}> => {
-    const dialogues = await fs.readFile('source/dialogue-lines.json', 'utf-8');
+    const dialogues = fs.readFileSync('source/dialogue-lines.json', 'utf-8');
     return JSON.parse(dialogues);
 })
 
@@ -15,12 +15,12 @@ const insertDialogueLine = task({
     name: "Save Dialogue Line",
     allowedFiles: ["output"]
 }, async (line: string, evaluation: string): Promise<void> => {
-    const output = await fs.readFile('output/evaluated-dialogue-lines.csv', 'utf-8');
+    const output = fs.readFileSync('output/evaluated-dialogue-lines.csv', 'utf-8');
     const outputCsv = output.trim().split('\n');
 
     outputCsv.push(`"${line}",${evaluation}`);
 
-    await fs.writeFile('output/evaluated-dialogue-lines.csv', outputCsv.join('\n'));
+    fs.writeFileSync('output/evaluated-dialogue-lines.csv', outputCsv.join('\n'));
 })
 
 const evaluateDialogueLine = task({

@@ -67,17 +67,43 @@ impl RuntimeCommand for RunInstance {
                                 .cloned()
                                 .unwrap_or(result_object);
 
-                            TaskResult {
-                                success: true,
-                                result: Some(result),
-                                error: None,
-                                execution: TaskExecution {
-                                    task_name: self.policy.name.clone(),
-                                    duration_ms: start_time.elapsed().as_millis() as u64,
-                                    retries: self.policy.max_retries,
-                                    fuel_consumed: self.policy.compute.as_fuel()
-                                        - self.store.get_fuel().unwrap_or(0),
-                                },
+                            if result.get("error_type").is_some() && result.get("message").is_some() {
+                                TaskResult {
+                                    success: false,
+                                    result: None,
+                                    error: Some(TaskError {
+                                        error_type: result
+                                            .get("error_type")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or_default()
+                                            .to_string(),
+                                        message: result
+                                            .get("message")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or_default()
+                                            .to_string(),
+                                    }),
+                                    execution: TaskExecution {
+                                        task_name: self.policy.name.clone(),
+                                        duration_ms: start_time.elapsed().as_millis() as u64,
+                                        retries: self.policy.max_retries,
+                                        fuel_consumed: self.policy.compute.as_fuel()
+                                            - self.store.get_fuel().unwrap_or(0),
+                                    },
+                                }
+                            } else {
+                                TaskResult {
+                                    success: true,
+                                    result: Some(result),
+                                    error: None,
+                                    execution: TaskExecution {
+                                        task_name: self.policy.name.clone(),
+                                        duration_ms: start_time.elapsed().as_millis() as u64,
+                                        retries: self.policy.max_retries,
+                                        fuel_consumed: self.policy.compute.as_fuel()
+                                            - self.store.get_fuel().unwrap_or(0),
+                                    },
+                                }
                             }
                         }
                         Err(error_string) => TaskResult {

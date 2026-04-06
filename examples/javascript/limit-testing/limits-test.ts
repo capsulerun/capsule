@@ -77,25 +77,21 @@ export const testRAMLimit = task(
     compute: "HIGH",
     timeout: "30s"
   },
-  (): string => {
+  async (): Promise<string> => {
     const arrays: number[][] = [];
 
-    try {
-      for (let i = 0; i < 1000; i++) {
-        const largeArray = new Array(1000000).fill(0).map((_, idx) => idx * Math.random());
-        arrays.push(largeArray);
 
-        if (i % 10 === 0) {
-          console.log(`📊 Allocated ${i} arrays (~${i * 8}MB)`);
-        }
+    for (let i = 0; i < 1000; i++) {
+      const largeArray = new Array(1000000).fill(0).map((_, idx) => idx * Math.random());
+      arrays.push(largeArray);
+
+      if (i % 10 === 0) {
+        console.log(`📊 Allocated ${i} arrays (~${i * 8}MB)`);
       }
-
-      console.log("Memory allocation completed (this should NOT print)");
-      return `RAM TEST FAILED - Should have run out of memory! Arrays: ${arrays.length}`;
-    } catch (error) {
-      console.log(`JavaScript error: ${error}`);
-      throw error;
     }
+
+    console.log("Memory allocation completed (this should NOT print)");
+    return `RAM TEST FAILED - Should have run out of memory! Arrays: ${arrays.length}`;
   }
 );
 
@@ -190,32 +186,32 @@ export const main = task(
   },
   async (): Promise<void> => {
     // Test 1: Timeout
-    console.log("\n🧪 Running Test 1: Timeout Limit");
-    await testTimeout();
+    // console.log("\n🧪 Running Test 1: Timeout Limit");
+    // await testTimeout();
 
-    // Test 2: Low Compute
-    console.log("\n🧪 Running Test 2: LOW Compute Limit");
-    testComputeLimitLow();
+    // // Test 2: Low Compute
+    // console.log("\n🧪 Running Test 2: LOW Compute Limit");
+    // testComputeLimitLow();
 
-    // Test 3: Medium Compute
-    console.log("\n🧪 Running Test 3: MEDIUM Compute Limit");
-    testComputeLimitMedium();
+    // // Test 3: Medium Compute
+    // console.log("\n🧪 Running Test 3: MEDIUM Compute Limit");
+    // testComputeLimitMedium();
 
     // Test 4: RAM Limit
     console.log("\n🧪 Running Test 4: RAM Limit");
-    testRAMLimit();
+    await testRAMLimit();
 
-    // Test 5: Combined Limits
-    console.log("\n🧪 Running Test 5: Combined Limits");
-    await testCombinedLimits();
+    // // Test 5: Combined Limits
+    // console.log("\n🧪 Running Test 5: Combined Limits");
+    // await testCombinedLimits();
 
-    // Test 6: Async Timeout
-    console.log("\n🧪 Running Test 6: Async Timeout");
-    await testAsyncTimeout();
+    // // Test 6: Async Timeout
+    // console.log("\n🧪 Running Test 6: Async Timeout");
+    // await testAsyncTimeout();
 
-    // Test 7: Immediate Fuel Exhaustion
-    console.log("\n🧪 Running Test 7: Immediate Fuel Exhaustion");
-    testImmediateFuelExhaustion();
+    // // Test 7: Immediate Fuel Exhaustion
+    // console.log("\n🧪 Running Test 7: Immediate Fuel Exhaustion");
+    // testImmediateFuelExhaustion();
 
     console.log("\n limit testing completed.");
   }

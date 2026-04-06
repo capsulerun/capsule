@@ -24,7 +24,7 @@ use capsule::host::api::{Host, HttpError, HttpResponse, TaskError};
 bindgen!({
     path: "../capsule-wit",
     world: "capsule-agent",
-    async: true,
+    async: true
 });
 
 pub use capsule::host::api as host_api;
@@ -90,9 +90,7 @@ impl Host for State {
 
         let task_config: TaskConfig = serde_json::from_str(&config).unwrap_or_default();
         let mut policy = task_config.to_execution_policy(&runtime.capsule_toml);
-        // Propagate dynamic mounts from the parent so sub-tasks can access
-        // runtime-injected paths (e.g. session workspaces). The sub-task's own
-        // `allowed_files` are preserved — only `mounts` are inherited.
+
         policy.mounts.extend(self.policy.mounts.iter().cloned());
         let max_retries = policy.max_retries;
 
@@ -186,8 +184,6 @@ impl Host for State {
             .ok()
             .and_then(|u| u.host_str().map(|h| h.to_string()))
             .unwrap_or("unknown".to_string());
-
-        println!("Policy: {:?}", &self.policy);
 
         let allowed = is_host_allowed(&host, &self.policy.allowed_hosts);
 
