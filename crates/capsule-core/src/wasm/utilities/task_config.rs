@@ -24,6 +24,15 @@ pub struct TaskExecution {
     pub retries: u64,
     pub fuel_consumed: u64,
     pub ram_used: u64,
+    pub host_requests: Vec<HostRequest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HostRequest {
+    pub method: String,
+    pub url: String,
+    pub headers: Option<Vec<(String, String)>>,
+    pub body: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]

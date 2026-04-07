@@ -8,6 +8,7 @@
 import { execFile } from 'child_process';
 import { resolve, extname } from 'path';
 import { existsSync } from 'fs';
+import { HostRequest } from './task';
 
 export interface RunnerOptions {
   file: string;
@@ -27,6 +28,7 @@ export interface RunnerResult {
     retries: number;
     fuel_consumed: number;
     ram_used: number;
+    host_requests: HostRequest[];
   };
 }
 

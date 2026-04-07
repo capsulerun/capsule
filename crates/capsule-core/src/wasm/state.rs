@@ -17,7 +17,7 @@ use crate::wasm::commands::run::RunInstance;
 use crate::wasm::execution_policy::ExecutionPolicy;
 use crate::wasm::runtime::Runtime;
 use crate::wasm::utilities::host_validator::is_host_allowed;
-use crate::wasm::utilities::task_config::{TaskConfig, TaskResult};
+use crate::wasm::utilities::task_config::{HostRequest, TaskConfig, TaskResult};
 
 use capsule::host::api::{Host, HttpError, HttpResponse, TaskError};
 
@@ -37,6 +37,7 @@ pub struct State {
     pub runtime: Option<Arc<Runtime>>,
     pub policy: ExecutionPolicy,
     pub peak_memory_bytes: u64,
+    pub host_requests: Vec<HostRequest>,
 }
 
 impl WasiView for State {
@@ -209,13 +210,20 @@ impl Host for State {
             }
         };
 
-        for (key, value) in headers {
+        for (key, value) in headers.clone() {
             request_builder = request_builder.header(key, value);
         }
 
-        if let Some(body_content) = body {
+        if let Some(body_content) = body.clone() {
             request_builder = request_builder.body(body_content);
         }
+
+        self.host_requests.push(HostRequest {
+            method: method.to_uppercase(),
+            url: url.clone(),
+            headers: Some(headers.clone()),
+            body,
+        });
 
         let response = request_builder
             .send()

@@ -47,6 +47,7 @@ impl RuntimeCommand for RunInstance {
                 state: InstanceState::Running,
                 fuel_consumed: self.policy.compute.as_fuel() - self.store.get_fuel().unwrap_or(0),
                 ram_used: self.store.data().peak_memory_bytes,
+                host_requests: self.store.data().host_requests.clone(),
             })
             .await?;
 
@@ -92,6 +93,7 @@ impl RuntimeCommand for RunInstance {
                                         fuel_consumed: self.policy.compute.as_fuel()
                                             - self.store.get_fuel().unwrap_or(0),
                                         ram_used: self.store.data().peak_memory_bytes,
+                                        host_requests: self.store.data().host_requests.clone(),
                                     },
                                 }
                             } else {
@@ -106,6 +108,7 @@ impl RuntimeCommand for RunInstance {
                                         fuel_consumed: self.policy.compute.as_fuel()
                                             - self.store.get_fuel().unwrap_or(0),
                                         ram_used: self.store.data().peak_memory_bytes,
+                                        host_requests: self.store.data().host_requests.clone(),
                                     },
                                 }
                             }
@@ -124,6 +127,7 @@ impl RuntimeCommand for RunInstance {
                                 fuel_consumed: self.policy.compute.as_fuel()
                                     - self.store.get_fuel().unwrap_or(0),
                                 ram_used: self.store.data().peak_memory_bytes,
+                                host_requests: self.store.data().host_requests.clone(),
                             },
                         },
                     },
@@ -141,6 +145,7 @@ impl RuntimeCommand for RunInstance {
                             fuel_consumed: self.policy.compute.as_fuel()
                                 - self.store.get_fuel().unwrap_or(0),
                             ram_used: self.store.data().peak_memory_bytes,
+                            host_requests: self.store.data().host_requests.clone(),
                         },
                     },
                 },
@@ -158,6 +163,7 @@ impl RuntimeCommand for RunInstance {
                         fuel_consumed: self.policy.compute.as_fuel()
                             - self.store.get_fuel().unwrap_or(0),
                         ram_used: self.store.data().peak_memory_bytes,
+                        host_requests: self.store.data().host_requests.clone(),
                     },
                 },
             },
@@ -195,6 +201,7 @@ impl RuntimeCommand for RunInstance {
                                     fuel_consumed: self.policy.compute.as_fuel()
                                         - self.store.get_fuel().unwrap_or(0),
                                     ram_used: self.store.data().peak_memory_bytes,
+                                    host_requests: self.store.data().host_requests.clone(),
                                 },
                             }
                         } else {
@@ -209,6 +216,7 @@ impl RuntimeCommand for RunInstance {
                                     fuel_consumed: self.policy.compute.as_fuel()
                                         - self.store.get_fuel().unwrap_or(0),
                                     ram_used: self.store.data().peak_memory_bytes,
+                                    host_requests: self.store.data().host_requests.clone(),
                                 },
                             }
                         }
@@ -227,6 +235,7 @@ impl RuntimeCommand for RunInstance {
                             fuel_consumed: self.policy.compute.as_fuel()
                                 - self.store.get_fuel().unwrap_or(0),
                             ram_used: self.store.data().peak_memory_bytes,
+                            host_requests: self.store.data().host_requests.clone(),
                         },
                     },
                 },
@@ -244,6 +253,7 @@ impl RuntimeCommand for RunInstance {
                         fuel_consumed: self.policy.compute.as_fuel()
                             - self.store.get_fuel().unwrap_or(0),
                         ram_used: self.store.data().peak_memory_bytes,
+                        host_requests: self.store.data().host_requests.clone(),
                     },
                 },
             },
@@ -262,6 +272,7 @@ impl RuntimeCommand for RunInstance {
                 state,
                 fuel_consumed: response.execution.fuel_consumed,
                 ram_used: response.execution.ram_used,
+                host_requests: response.execution.host_requests.clone(),
             })
             .await?;
 
