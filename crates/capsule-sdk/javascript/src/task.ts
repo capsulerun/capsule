@@ -50,13 +50,18 @@ interface TaskExecution {
     duration_ms: number;
     retries: number;
     fuel_consumed: number;
+    ram_used: number;
+    host_requests: HostRequest[];
 }
 
-type Awaited<T> = T extends Promise<infer U> ? U : T;
+export interface HostRequest {
+  method: string;
+  url: string;
+  headers?: string[] | null;
+  body?: string | null;
+  status: number;
+}
 
-type TaskReturnType<T> = T extends Promise<infer U>
-  ? Promise<TaskResult<U>>
-  : TaskResult<T>;
 
 /**
  * Define a Capsule task with configuration.
@@ -121,10 +126,20 @@ function normalizeAllowedFile(entry: string | AllowedFile): string {
   }
 }
 
-export function task<TArgs extends any[], TReturn>(
+export function task<TArgs extends unknown[], TReturn>(
+  options: TaskOptions,
+  fn: (...args: TArgs) => Promise<TReturn>
+): (...args: TArgs) => Promise<TaskResult<TReturn>>;
+
+export function task<TArgs extends unknown[], TReturn>(
   options: TaskOptions,
   fn: (...args: TArgs) => TReturn
-): (...args: TArgs) => TaskReturnType<TReturn> {
+): (...args: TArgs) => TaskResult<TReturn>;
+
+export function task<TArgs extends unknown[], TReturn>(
+  options: TaskOptions,
+  fn: (...args: TArgs) => TReturn | Promise<TReturn>
+): (...args: TArgs) => TaskResult<TReturn> | Promise<TaskResult<TReturn>> {
   const taskName = options.name;
   let compute = options.compute?.toString().toUpperCase() ?? "MEDIUM";
   let allowedHosts = options.allowedHosts ?? [];
@@ -140,45 +155,48 @@ export function task<TArgs extends any[], TReturn>(
     envVariables: options.envVariables,
   };
 
-  const wrapper = (...args: TArgs): TaskReturnType<TReturn> => {
+  const wrapper = (...args: TArgs): TaskResult<TReturn> | Promise<TaskResult<TReturn>> => {
     if (!isWasmMode()) {
       const result = fn(...args);
 
       if (result instanceof Promise) {
         return result.then((value) => ({
           success: true,
-          result: value,
+          result: value as TReturn,
           error: null,
           execution: {
             task_name: taskName,
             duration_ms: 0,
             retries: 0,
             fuel_consumed: 0,
+            ram_used: 0,
+            host_requests: [],
           },
-        })) as TaskReturnType<TReturn>;
+        }));
       }
 
       return {
         success: true,
-        result,
+        result: result as TReturn,
         error: null,
         execution: {
           task_name: taskName,
           duration_ms: 0,
           retries: 0,
           fuel_consumed: 0,
+          ram_used: 0,
+          host_requests: [],
         },
-      } as TaskReturnType<TReturn>;
+      };
     }
 
     const resultJson = callHost(taskName, args, taskConfig);
 
     try {
-      const result: TaskResult<Awaited<TReturn>> = JSON.parse(resultJson);
-      return result as TaskReturnType<TReturn>;
+      return JSON.parse(resultJson) as TaskResult<TReturn>;
     } catch (e) {
       if (e instanceof SyntaxError) {
-        return resultJson as unknown as TaskReturnType<TReturn>;
+        return resultJson as unknown as TaskResult<TReturn>;
       }
       throw e;
     }

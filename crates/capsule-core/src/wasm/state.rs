@@ -17,7 +17,7 @@ use crate::wasm::commands::run::RunInstance;
 use crate::wasm::execution_policy::ExecutionPolicy;
 use crate::wasm::runtime::Runtime;
 use crate::wasm::utilities::host_validator::is_host_allowed;
-use crate::wasm::utilities::task_config::{TaskConfig, TaskResult};
+use crate::wasm::utilities::task_config::{HostRequest, TaskConfig, TaskResult};
 
 use capsule::host::api::{Host, HttpError, HttpResponse, TaskError};
 
@@ -36,6 +36,8 @@ pub struct State {
     pub limits: StoreLimits,
     pub runtime: Option<Arc<Runtime>>,
     pub policy: ExecutionPolicy,
+    pub peak_memory_bytes: u64,
+    pub host_requests: Vec<HostRequest>,
 }
 
 impl WasiView for State {
@@ -67,6 +69,19 @@ impl WasiHttpView for State {
         if !allowed {
             return Err(ErrorCode::HttpRequestDenied.into());
         }
+
+        let headers: Vec<(String, String)> = request
+            .headers()
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+            .collect();
+
+        self.host_requests.push(HostRequest {
+            method: request.method().to_string().to_uppercase(),
+            url: request.uri().to_string(),
+            headers: Some(headers),
+            body: Some("Hidden".to_string()), // Can't have it from send_request
+        });
 
         Ok(default_send_request(request, config))
     }
@@ -208,13 +223,20 @@ impl Host for State {
             }
         };
 
-        for (key, value) in headers {
+        for (key, value) in headers.clone() {
             request_builder = request_builder.header(key, value);
         }
 
-        if let Some(body_content) = body {
+        if let Some(body_content) = body.clone() {
             request_builder = request_builder.body(body_content);
         }
+
+        self.host_requests.push(HostRequest {
+            method: method.to_uppercase(),
+            url: url.clone(),
+            headers: Some(headers.clone()),
+            body,
+        });
 
         let response = request_builder
             .send()
@@ -248,6 +270,10 @@ impl ResourceLimiter for State {
         desired: usize,
         maximum: Option<usize>,
     ) -> Result<bool> {
+        if desired as u64 > self.peak_memory_bytes {
+            self.peak_memory_bytes = desired as u64;
+        }
+
         self.limits.memory_growing(current, desired, maximum)
     }
 

@@ -85,6 +85,8 @@ impl RuntimeCommand for CreateInstance {
                 state: InstanceState::Created,
                 fuel_limit: self.policy.compute.as_fuel(),
                 fuel_consumed: 0,
+                ram_used: 0,
+                host_requests: Vec::new(),
             })
             .await?;
 
@@ -157,6 +159,8 @@ impl RuntimeCommand for CreateInstance {
             limits,
             runtime: Some(Arc::clone(&runtime)),
             policy: self.policy.clone(),
+            peak_memory_bytes: 0,
+            host_requests: Vec::new(),
         };
 
         let mut store = Store::new(&runtime.engine, state);
@@ -191,6 +195,8 @@ impl RuntimeCommand for CreateInstance {
                         task_id: self.task_id,
                         state: InstanceState::Failed,
                         fuel_consumed: 0,
+                        ram_used: 0,
+                        host_requests: Vec::new(),
                     })
                     .await?;
                 return Err(WasmRuntimeError::WasmtimeError(e));

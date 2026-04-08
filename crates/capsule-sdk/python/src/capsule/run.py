@@ -21,11 +21,21 @@ class RunnerOptions(TypedDict, total=False):
     capsule_path: Optional[str]
 
 
+class HostRequest(TypedDict):
+    method: str
+    url: str
+    headers: Optional[list[str]]
+    body: Optional[str]
+    status: int
+
+
 class ExecutionInfo(TypedDict):
     task_name: str
     duration_ms: int
     retries: int
     fuel_consumed: int
+    ram_used: int
+    host_requests: list[HostRequest]
 
 
 class ErrorInfo(TypedDict):
