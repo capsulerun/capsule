@@ -7,7 +7,7 @@ name = "capsule"
 version = "0.8.0"
 description = "Capsule Python SDK - run AI agent tasks in secure WASM sandboxes"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
 authors = [
     {name = "Capsule Contributors"}
@@ -34,7 +34,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "componentize-py>=0.19.3",
+    "componentize-py>=0.22.0",
 ]
 
 [project.optional-dependencies]
