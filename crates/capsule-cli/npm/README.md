@@ -147,7 +147,9 @@ Every task returns a structured JSON envelope containing both the result and exe
     "task_name": "data_processor",
     "duration_ms": 1523,
     "retries": 0,
-    "fuel_consumed": 45000
+    "fuel_consumed": 45000,
+    "ram_used": 1200000,
+    "host_requests": [{...}]
   }
 }
 ```
@@ -161,6 +163,8 @@ Every task returns a structured JSON envelope containing both the result and exe
   - `duration_ms` — Execution time in milliseconds
   - `retries` — Number of retry attempts that occurred
   - `fuel_consumed` — CPU resources used (see [Compute Levels](#compute-levels))
+  - `ram_used` — Peak memory used in bytes
+  - `host_requests` — List of host requests made by the task
 
 ## Documentation
 
