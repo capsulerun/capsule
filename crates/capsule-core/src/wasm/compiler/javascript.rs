@@ -122,9 +122,15 @@ impl JavascriptWasmCompiler {
             }
         }
 
-        let sdk_node_modules = sdk_path.join("node_modules").join(package_name);
-        if sdk_node_modules.exists() {
-            return sdk_node_modules;
+        let resolved_sdk = sdk_path
+            .canonicalize()
+            .map(|p| Self::normalize_path_for_command(&p))
+            .unwrap_or_else(|_| sdk_path.to_path_buf());
+        if let Some(node_modules) = resolved_sdk.parent().and_then(|p| p.parent()) {
+            let pkg_path = node_modules.join(package_name);
+            if pkg_path.exists() {
+                return pkg_path;
+            }
         }
 
         source_dir.join("node_modules").join(package_name)
@@ -378,20 +384,36 @@ export {{ incomingHandler }};
                 })?,
         );
 
-        let output = Self::npx_command()
-            .arg("tsc")
-            .arg(&self.source_path)
+        let source_dir = self.source_path.parent().ok_or_else(|| {
+            JavascriptWasmCompilerError::FsError("Cannot determine source directory".to_string())
+        })?;
+
+        let cache_dir_normalized = Self::normalize_path_for_command(&self.cache_dir);
+
+        let mut cmd = Self::npx_command();
+        cmd.arg("tsc");
+
+        let tsconfig_path = source_dir.join("tsconfig.json");
+        if tsconfig_path.exists() {
+            cmd.arg("--project")
+                .arg(Self::normalize_path_for_command(&tsconfig_path));
+        } else {
+            cmd.arg(Self::normalize_path_for_command(&self.source_path))
+                .arg("--module")
+                .arg("esnext")
+                .arg("--target")
+                .arg("esnext")
+                .arg("--moduleResolution")
+                .arg("bundler")
+                .arg("--esModuleInterop")
+                .arg("--skipLibCheck");
+        }
+
+        let output = cmd
             .arg("--outDir")
-            .arg(&self.cache_dir)
-            .arg("--module")
-            .arg("esnext")
-            .arg("--target")
-            .arg("esnext")
-            .arg("--moduleResolution")
-            .arg("bundler")
-            .arg("--esModuleInterop")
-            .arg("--skipLibCheck")
-            .arg("--ignoreConfig")
+            .arg(&cache_dir_normalized)
+            .arg("--rootDir")
+            .arg(Self::normalize_path_for_command(source_dir))
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()?;
