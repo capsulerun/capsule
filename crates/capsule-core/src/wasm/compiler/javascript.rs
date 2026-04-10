@@ -391,6 +391,7 @@ export {{ incomingHandler }};
             .arg("bundler")
             .arg("--esModuleInterop")
             .arg("--skipLibCheck")
+            .arg("--ignoreConfig")
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()?;
