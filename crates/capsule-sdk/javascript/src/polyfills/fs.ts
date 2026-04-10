@@ -3,6 +3,8 @@
  * Provides both Node.js fs API
  */
 
+import { getCwd } from './process.js';
+
 declare const globalThis: {
     'wasi:filesystem/types': any;
     'wasi:filesystem/preopens': any;
@@ -76,11 +78,24 @@ function normalizePath(path: string): string {
     return path;
 }
 
+/**
+ * Absolute paths pass through unchanged.
+ */
+function getEffectivePath(path: string): string {
+    if (path.startsWith('/')) return path;
+
+    const cwd = getCwd();
+    if (cwd === '.' || cwd === '') return path;
+    if (path === '.') return cwd;
+    if (path.startsWith('./')) return cwd.replace(/\/+$/, '') + '/' + path.slice(2);
+    return cwd.replace(/\/+$/, '') + '/' + path;
+}
+
 function resolvePath(path: string): { dir: Descriptor; relativePath: string } | null {
     const preopens = getPreopenedDirs();
     if (preopens.length === 0) return null;
 
-    const normalizedPath = normalizePath(path);
+    const normalizedPath = normalizePath(getEffectivePath(path));
 
     let catchAll: { dir: Descriptor; relativePath: string } | null = null;
 
@@ -298,9 +313,6 @@ export function readdir(
 
 // ---------------------------------------------------------------------------
 // Sync implementations
-// wasi:filesystem/types@0.2.0 descriptor methods (openAt, read, write, stat,
-// readDirectory, etc.) are direct component-model imports — they are
-// synchronous from JS's perspective. No asyncify, no event-loop blocking.
 // ---------------------------------------------------------------------------
 
 function enoent(path: string): Error {
@@ -312,7 +324,6 @@ function enoent(path: string): Error {
 
 /**
  * Read file contents synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function readFileSync(path: string, options?: ReadFileOptions | Encoding): string | Uint8Array {
     const resolved = resolvePath(path);
@@ -332,7 +343,6 @@ export function readFileSync(path: string, options?: ReadFileOptions | Encoding)
 
 /**
  * Write data to a file synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function writeFileSync(path: string, data: string | Uint8Array, _options?: WriteFileOptions | Encoding): void {
     const resolved = resolvePath(path);
@@ -354,7 +364,6 @@ export function writeFileSync(path: string, data: string | Uint8Array, _options?
 
 /**
  * Append data to a file synchronously, creating it if it doesn't exist.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function appendFileSync(path: string, data: string | Uint8Array, _options?: WriteFileOptions | Encoding): void {
     const resolved = resolvePath(path);
@@ -377,7 +386,6 @@ export function appendFileSync(path: string, data: string | Uint8Array, _options
 
 /**
  * Read directory contents synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function readdirSync(path: string, _options?: any): string[] {
     const resolved = resolvePath(path);
@@ -431,7 +439,6 @@ function makeStatResult(type: 'file' | 'directory' | 'notfound', size: bigint = 
 
 /**
  * Get file stats synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function statSync(path: string): StatResult {
     const resolved = resolvePath(path);
@@ -456,7 +463,6 @@ export function lstatSync(path: string): StatResult {
 
 /**
  * Create a directory synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function mkdirSync(path: string, options?: MkdirOptions): void {
     if (options?.recursive) {
@@ -481,7 +487,6 @@ export function mkdirSync(path: string, options?: MkdirOptions): void {
 
 /**
  * Remove a directory synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function rmdirSync(path: string, _options?: RmdirOptions): void {
     const resolved = resolvePath(path);
@@ -495,7 +500,6 @@ export function rmdirSync(path: string, _options?: RmdirOptions): void {
 
 /**
  * Remove a file or directory synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function rmSync(path: string, options?: RmOptions): void {
     const resolved = resolvePath(path);
@@ -527,7 +531,6 @@ export function rmSync(path: string, options?: RmOptions): void {
 
 /**
  * Remove a file synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function unlinkSync(path: string): void {
     const resolved = resolvePath(path);
@@ -541,7 +544,6 @@ export function unlinkSync(path: string): void {
 
 /**
  * Copy a file synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function copyFileSync(src: string, dest: string): void {
     const data = readFileSync(src) as Uint8Array;
@@ -550,8 +552,6 @@ export function copyFileSync(src: string, dest: string): void {
 
 /**
  * Rename a file or directory synchronously.
- * Falls back to copy+delete since wasi:filesystem/types@0.2.0
- * does not expose a rename/link-at in the current WIT binding.
  */
 export function renameSync(oldPath: string, newPath: string): void {
     try {
@@ -582,7 +582,6 @@ export function accessSync(path: string, _mode?: number): void {
 
 /**
  * Check if a path exists synchronously.
- * Backed by wasi:filesystem/types@0.2.0 — fully synchronous.
  */
 export function existsSync(path: string): boolean {
     const resolved = resolvePath(path);
