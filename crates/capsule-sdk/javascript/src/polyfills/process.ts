@@ -70,20 +70,23 @@ function getArgv(): string[] {
 }
 
 /**
- * Initialized from wasi:cli/environment initialCwd(), falls back to '.'.
+ * Initialized from wasi:cli/environment initialCwd(), falls back to '/'.
  */
 let _virtualCwd: string = (() => {
     try {
         const env = (globalThis as any)['wasi:cli/environment'];
         if (env && typeof env.initialCwd === 'function') {
-            return env.initialCwd() ?? '.';
+            const initial = env.initialCwd();
+            if (initial) {
+                 return initial.startsWith('/') ? initial : '/' + initial;
+            }
         }
     } catch {}
-    return '.';
+    return '/';
 })();
 
 /**
- * Internal setter for virtual CWD — handles relative and absolute paths.
+ * Internal setter for virtual CWD — handles relative and absolute paths safely via absolute resolution.
  */
 function setCwd(directory: string): void {
     if (!directory) return;
@@ -92,11 +95,10 @@ function setCwd(directory: string): void {
     } else if (directory === '..') {
         const parts = _virtualCwd.split('/').filter(Boolean);
         parts.pop();
-        _virtualCwd = parts.join('/') || '.';
+        _virtualCwd = '/' + parts.join('/');
     } else {
-        _virtualCwd = (_virtualCwd === '.' || _virtualCwd === '')
-            ? directory.replace(/\/+$/, '')
-            : _virtualCwd.replace(/\/+$/, '') + '/' + directory.replace(/\/+$/, '');
+        const base = _virtualCwd.endsWith('/') ? _virtualCwd : _virtualCwd + '/';
+        _virtualCwd = (base + directory).replace(/\/+$/, '');
     }
 }
 

@@ -107,9 +107,11 @@ function resolvePath(path: string): { dir: Descriptor; relativePath: string } | 
             continue;
         }
 
-        if (normalizedPath.startsWith(normalizedGuest + '/')) {
-            const relativePath = normalizedPath.slice(normalizedGuest.length + 1);
-            return { dir: descriptor, relativePath };
+        const guestPrefix = normalizedGuest.endsWith('/') ? normalizedGuest : normalizedGuest + '/';
+
+        if (normalizedPath.startsWith(guestPrefix)) {
+            const relativePath = normalizedPath.slice(guestPrefix.length);
+            return { dir: descriptor, relativePath: relativePath || '.' };
         }
 
         if (normalizedPath === normalizedGuest) {
