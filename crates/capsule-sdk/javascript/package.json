@@ -1,6 +1,6 @@
 {
   "name": "@capsule-run/sdk",
-  "version": "0.8.0",
+  "version": "0.8.5",
   "description": "Capsule JavaScript SDK - run AI agent tasks in secure WASM sandboxes",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,7 +30,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-unenv-polyfills.mjs",
     "clean": "rm -rf dist"
   },
   "keywords": [

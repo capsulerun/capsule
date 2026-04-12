@@ -144,9 +144,6 @@ class SocketShim:
             request_str = self._send_buffer.decode('utf-8', errors='replace')
             method, url, headers_dict, body = self._parse_http_request(request_str)
 
-            # Remove Accept-Encoding so the Rust host fetches plain text.
-            # The host always returns a decoded body; keeping this header would
-            # return compressed bytes that the client would try to decompress again.
             headers_dict.pop('Accept-Encoding', None)
             headers_dict.pop('accept-encoding', None)
 
@@ -278,7 +275,6 @@ class SSLContext:
 
     def __init__(self, protocol=None):
         self.protocol = protocol
-        # Attributes read/written by urllib and http.client
         self.check_hostname = True
         self.verify_mode = 2        # ssl.CERT_REQUIRED
         self.post_handshake_auth = False
@@ -339,7 +335,6 @@ def socketpair(family=SocketShim.AF_INET, type=SocketShim.SOCK_STREAM, proto=0):
 
 def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
     """Get address info (simplified for HTTP/HTTPS)."""
-    # Return a minimal valid response
     family = family or SocketShim.AF_INET
     type = type or SocketShim.SOCK_STREAM
     return [(family, type, proto, '', (host, port))]

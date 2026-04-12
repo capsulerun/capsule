@@ -70,20 +70,42 @@ function getArgv(): string[] {
 }
 
 /**
- * Get current working directory from WASI
+ * Initialized from wasi:cli/environment initialCwd(), falls back to '.'.
  */
-function getCwd(): string {
-    const bindings = getEnvBindings();
-    if (!bindings || typeof bindings.initialCwd !== 'function') {
-        return '/';
-    }
-
+let _virtualCwd: string = (() => {
     try {
-        const cwd = bindings.initialCwd();
-        return cwd || '/';
-    } catch {
-        return '/';
+        const env = (globalThis as any)['wasi:cli/environment'];
+        if (env && typeof env.initialCwd === 'function') {
+            return env.initialCwd() ?? '.';
+        }
+    } catch {}
+    return '.';
+})();
+
+/**
+ * Internal setter for virtual CWD — handles relative and absolute paths.
+ */
+function setCwd(directory: string): void {
+    if (!directory) return;
+    if (directory.startsWith('/')) {
+        _virtualCwd = directory.replace(/\/+$/, '') || '/';
+    } else if (directory === '..') {
+        const parts = _virtualCwd.split('/').filter(Boolean);
+        parts.pop();
+        _virtualCwd = parts.join('/') || '.';
+    } else {
+        _virtualCwd = (_virtualCwd === '.' || _virtualCwd === '')
+            ? directory.replace(/\/+$/, '')
+            : _virtualCwd.replace(/\/+$/, '') + '/' + directory.replace(/\/+$/, '');
     }
+}
+
+/**
+ * Returns the current virtual CWD.
+ * Exported so the fs polyfill can resolve relative paths against it.
+ */
+export function getCwd(): string {
+    return _virtualCwd;
 }
 
 const process = {
@@ -102,17 +124,20 @@ const process = {
     },
 
     /**
-     * Returns the current working directory
+     * Returns the current virtual working directory.
+     * Backed by in-process state, same as CPython's WASI libc.
      */
     cwd(): string {
         return getCwd();
     },
 
     /**
-     * Change directory (not supported in WASI)
+     * Change the virtual working directory.
+     * Affects all relative path resolution in the fs polyfill.
+     * Does not perform any real syscall — mirrors CPython WASI behaviour.
      */
     chdir(directory: string): void {
-        throw new Error('process.chdir() is not supported in WASI environment');
+        setCwd(directory);
     },
 
     /**

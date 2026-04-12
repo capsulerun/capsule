@@ -114,22 +114,6 @@ impl JavascriptWasmCompiler {
         }
     }
 
-    fn find_package(package_name: &str, source_dir: &Path, sdk_path: &Path) -> PathBuf {
-        if let Some(project_node_modules) = Self::find_node_modules(source_dir) {
-            let project_path = project_node_modules.join(package_name);
-            if project_path.exists() {
-                return project_path;
-            }
-        }
-
-        let sdk_node_modules = sdk_path.join("node_modules").join(package_name);
-        if sdk_node_modules.exists() {
-            return sdk_node_modules;
-        }
-
-        source_dir.join("node_modules").join(package_name)
-    }
-
     pub fn compile_wasm(&self, export: bool) -> Result<PathBuf, JavascriptWasmCompilerError> {
         let source_dir = self.source_path.parent().ok_or_else(|| {
             JavascriptWasmCompilerError::FsError("Cannot determine source directory".to_string())
@@ -200,11 +184,9 @@ export {{ incomingHandler }};
         let sdk_path_normalized = Self::normalize_path_for_command(&sdk_path);
         let output_wasm_normalized = Self::normalize_path_for_command(&self.output_wasm);
 
-        let unenv_path = Self::find_package("unenv", source_dir, &sdk_path_normalized);
         let os_polyfill_path = sdk_path_normalized.join("dist/polyfills/os.js");
         let process_polyfill_path = sdk_path_normalized.join("dist/polyfills/process.js");
         let fs_polyfill_path = sdk_path_normalized.join("dist/polyfills/fs.js");
-
         let mut esbuild_cmd = Self::npx_command();
         esbuild_cmd
             .arg("esbuild")
@@ -242,10 +224,10 @@ export {{ incomingHandler }};
                     .display()
             ));
 
-        esbuild_cmd.arg(format!("--alias:unenv={}", unenv_path.display()));
-
-        let unenv_node_dir = unenv_path.join("dist/runtime/node");
-        let mut stack = vec![(unenv_node_dir, String::new())];
+        let bundled_unenv_dir = sdk_path_normalized.join("dist/polyfills/unenv-runtime");
+        let bundled_node_dir = bundled_unenv_dir.join("node");
+        esbuild_cmd.arg(format!("--alias:unenv={}", bundled_unenv_dir.display()));
+        let mut stack = vec![(bundled_node_dir, String::new())];
         while let Some((dir, prefix)) = stack.pop() {
             let Ok(entries) = fs::read_dir(&dir) else {
                 continue;
@@ -378,19 +360,36 @@ export {{ incomingHandler }};
                 })?,
         );
 
-        let output = Self::npx_command()
-            .arg("tsc")
-            .arg(&self.source_path)
+        let source_dir = self.source_path.parent().ok_or_else(|| {
+            JavascriptWasmCompilerError::FsError("Cannot determine source directory".to_string())
+        })?;
+
+        let cache_dir_normalized = Self::normalize_path_for_command(&self.cache_dir);
+
+        let mut cmd = Self::npx_command();
+        cmd.arg("tsc");
+
+        let tsconfig_path = source_dir.join("tsconfig.json");
+        if tsconfig_path.exists() {
+            cmd.arg("--project")
+                .arg(Self::normalize_path_for_command(&tsconfig_path));
+        } else {
+            cmd.arg(Self::normalize_path_for_command(&self.source_path))
+                .arg("--module")
+                .arg("esnext")
+                .arg("--target")
+                .arg("esnext")
+                .arg("--moduleResolution")
+                .arg("bundler")
+                .arg("--esModuleInterop")
+                .arg("--skipLibCheck");
+        }
+
+        let output = cmd
             .arg("--outDir")
-            .arg(&self.cache_dir)
-            .arg("--module")
-            .arg("esnext")
-            .arg("--target")
-            .arg("esnext")
-            .arg("--moduleResolution")
-            .arg("bundler")
-            .arg("--esModuleInterop")
-            .arg("--skipLibCheck")
+            .arg(&cache_dir_normalized)
+            .arg("--rootDir")
+            .arg(Self::normalize_path_for_command(source_dir))
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()?;
