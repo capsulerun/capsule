@@ -70,6 +70,16 @@ fn parse_path_spec(path_spec: &str) -> (String, Option<String>, FileAccessMode) 
     }
 }
 
+fn to_absolute_guest_path(path: &str) -> String {
+    let stripped = path.trim_start_matches("./");
+
+    if stripped.starts_with('/') {
+        stripped.to_string()
+    } else {
+        format!("/{}", stripped)
+    }
+}
+
 pub fn validate_path(
     path_spec: &str,
     project_root: &Path,
@@ -94,7 +104,8 @@ pub fn validate_path(
         return Err(PathValidationError::EscapesProjectDirectory(host_str));
     }
 
-    let guest_path = guest_alias.unwrap_or_else(|| host_str.clone());
+    let raw_guest = guest_alias.unwrap_or_else(|| host_str.clone());
+    let guest_path = to_absolute_guest_path(&raw_guest);
 
     Ok(ParsedPath {
         path: resolved,
@@ -132,7 +143,7 @@ mod tests {
 
         assert!(result.is_ok());
         let parsed = result.unwrap();
-        assert_eq!(parsed.guest_path, "./.capsule_test");
+        assert_eq!(parsed.guest_path, "/.capsule_test");
     }
 
     #[test]
@@ -197,5 +208,15 @@ mod tests {
         assert_eq!(path, "./data");
         assert_eq!(guest, Some("workspace".to_string()));
         assert_eq!(mode, FileAccessMode::ReadOnly);
+    }
+
+    #[test]
+    fn test_guest_path_normalization() {
+        assert_eq!(to_absolute_guest_path("./data"), "/data");
+        assert_eq!(to_absolute_guest_path("data"), "/data");
+        assert_eq!(to_absolute_guest_path("/data"), "/data");
+        assert_eq!(to_absolute_guest_path("/"), "/");
+        assert_eq!(to_absolute_guest_path("workspace"), "/workspace");
+        assert_eq!(to_absolute_guest_path("./nested/dir"), "/nested/dir");
     }
 }

@@ -4,8 +4,6 @@ from . import http
 from .app import TaskRunner
 from .run import run, RunnerOptions, RunnerResult, ExecutionInfo, ErrorInfo
 
-import socket
-import ssl
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -14,3 +12,5 @@ import http.client
 import http.cookiejar
 
 exports = app.exports
+
+
