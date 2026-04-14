@@ -6,6 +6,7 @@ use std::fmt;
 use std::path::Path;
 
 use cli::{Cli, Commands};
+use commands::shared::load_args_file;
 use commands::{BuildError, ExecError, RunError, build, exec, run};
 
 #[derive(Debug)]
@@ -53,8 +54,13 @@ async fn main() -> Result<(), CliError> {
             json,
             verbose,
             mount,
+            args_file,
             args,
         } => {
+            let args = match args_file {
+                Some(ref path) => load_args_file(path).map_err(CliError::RunError)?,
+                None => args,
+            };
             let file_path = file.as_deref().map(Path::new);
             let result = run::execute(file_path, args, mount, json, verbose).await?;
 
@@ -75,8 +81,13 @@ async fn main() -> Result<(), CliError> {
             json,
             verbose,
             mount,
+            args_file,
             args,
         } => {
+            let args = match args_file {
+                Some(ref path) => load_args_file(path).map_err(CliError::ExecError)?,
+                None => args,
+            };
             let result = exec::execute(Path::new(&file), args, mount, json, verbose).await?;
 
             if json {

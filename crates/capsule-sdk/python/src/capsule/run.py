@@ -8,10 +8,13 @@ from third party applications.
 import asyncio
 import json
 import os
+import tempfile
+import uuid
 from typing import Any, Optional, TypedDict
 
 _WASM_EXTENSIONS = {".wasm"}
 _SOURCE_EXTENSIONS = {".py"}
+_ARGS_FILE_THRESHOLD = 8 * 1024
 
 
 class RunnerOptions(TypedDict, total=False):
@@ -92,7 +95,21 @@ async def run(
 
     subcommand = "exec" if ext in _WASM_EXTENSIONS else "run"
     mount_flags = [flag for m in mounts for flag in ("--mount", m)]
-    cmd = [capsule_path, subcommand, resolved_file, "--json", *mount_flags, *args]
+
+    serialized_args = json.dumps(args).encode("utf-8")
+    args_file_path: Optional[str] = None
+
+    if len(serialized_args) > _ARGS_FILE_THRESHOLD:
+        args_file_path = os.path.join(
+            tempfile.gettempdir(), f"capsule-args-{uuid.uuid4().hex}.json"
+        )
+        with open(args_file_path, "w", encoding="utf-8") as f:
+            f.write(serialized_args.decode("utf-8"))
+        args_flags = ["--args-file", args_file_path]
+    else:
+        args_flags = args
+
+    cmd = [capsule_path, subcommand, resolved_file, "--json", *mount_flags, *args_flags]
 
     try:
         process = await asyncio.create_subprocess_exec(
@@ -103,6 +120,12 @@ async def run(
         )
 
         stdout, stderr = await process.communicate()
+
+        if args_file_path:
+            try:
+                os.unlink(args_file_path)
+            except OSError:
+                pass
 
         if process.returncode != 0 and not stdout:
             error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
@@ -117,6 +140,11 @@ async def run(
             )
 
     except FileNotFoundError:
+        if args_file_path:
+            try:
+                os.unlink(args_file_path)
+            except OSError:
+                pass
         raise FileNotFoundError(
             "Capsule CLI not found. Use 'pip install capsule-run' to install it."
         )

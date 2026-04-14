@@ -6,8 +6,10 @@
  */
 
 import { execFile } from 'child_process';
-import { resolve, extname } from 'path';
-import { existsSync } from 'fs';
+import { resolve, extname, join } from 'path';
+import { existsSync, writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { randomUUID } from 'crypto';
 import { HostRequest } from './task';
 
 export interface RunnerOptions {
@@ -33,6 +35,7 @@ export interface RunnerResult {
 }
 
 const WASM_EXTENSIONS = new Set(['.wasm']);
+const ARGS_FILE_THRESHOLD = 8 * 1024;
 
 /**
  * Get the appropriate capsule command for the current platform
@@ -42,6 +45,16 @@ function getCapsuleCommand(capsulePath: string): string {
     return `${capsulePath}.cmd`;
   }
   return capsulePath;
+}
+
+/**
+ * Write args to a temp file and return its path.
+ * Caller is responsible for deleting it.
+ */
+function writeArgsFile(args: string[]): string {
+  const path = join(tmpdir(), `capsule-args-${randomUUID()}.json`);
+  writeFileSync(path, JSON.stringify(args), 'utf-8');
+  return path;
 }
 
 /**
@@ -66,20 +79,37 @@ export function run(options: RunnerOptions): Promise<RunnerResult> {
   }
 
   const subcommand = isWasm ? 'exec' : 'run';
+  const mountFlags = mounts.flatMap(m => ['--mount', m]);
+
+  const serializedArgs = JSON.stringify(args);
+  const useArgsFile = Buffer.byteLength(serializedArgs, 'utf-8') > ARGS_FILE_THRESHOLD;
+
+  let argsFilePath: string | null = null;
+  let argsFlags: string[];
+
+  if (useArgsFile) {
+    argsFilePath = writeArgsFile(args);
+    argsFlags = ['--args-file', argsFilePath];
+  } else {
+    argsFlags = args;
+  }
+
+  const cmdArgs = [subcommand, resolvedFile, '--json', ...mountFlags, ...argsFlags];
+
+  let executable = command;
+  let executionArgs = cmdArgs;
+
+  if (process.platform === 'win32') {
+    executable = process.env.comspec || 'cmd.exe';
+    executionArgs = ['/d', '/s', '/c', command, ...cmdArgs];
+  }
 
   return new Promise((resolve, reject) => {
-    const mountFlags = mounts.flatMap(m => ['--mount', m]);
-    const cmdArgs = [subcommand, resolvedFile, '--json', ...mountFlags, ...args];
-
-    let executable = command;
-    let executionArgs = cmdArgs;
-
-    if (process.platform === 'win32') {
-      executable = process.env.comspec || 'cmd.exe';
-      executionArgs = ['/d', '/s', '/c', command, ...cmdArgs];
-    }
-
     execFile(executable, executionArgs, { cwd, encoding: 'utf-8' }, (error, stdout, stderr) => {
+      if (argsFilePath) {
+        try { unlinkSync(argsFilePath); } catch { }
+      }
+
       if (error && !stdout) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           reject(new Error(

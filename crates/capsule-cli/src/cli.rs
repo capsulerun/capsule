@@ -23,6 +23,9 @@ pub enum Commands {
         #[arg(long, value_name = "HOST[::GUEST][:ro|:rw]")]
         mount: Vec<String>,
 
+        #[arg(long, value_name = "FILE", conflicts_with = "args")]
+        args_file: Option<String>,
+
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -43,6 +46,9 @@ pub enum Commands {
 
         #[arg(long, value_name = "HOST[::GUEST][:ro|:rw]")]
         mount: Vec<String>,
+
+        #[arg(long, value_name = "FILE", conflicts_with = "args")]
+        args_file: Option<String>,
 
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,

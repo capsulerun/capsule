@@ -83,11 +83,13 @@ pub async fn execute(
 
     reporter.start_progress("Initializing runtime");
 
-    let project_root = file_path
-        .canonicalize()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+    let project_root = std::env::current_dir().unwrap_or_else(|_| {
+        file_path
+            .canonicalize()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_default()
+    });
 
     load_env_variables(&project_root).map_err(RunError::IoError)?;
 
