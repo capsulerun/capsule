@@ -125,6 +125,7 @@ impl JavascriptWasmCompiler {
             &self.output_wasm,
             &["js", "ts", "toml"],
             &["node_modules", "dist"],
+            Some("js"),
         ) {
             if export && let Some(file_stem) = self.source_path.file_stem() {
                 let export_path = source_dir.join(file_stem).with_extension("wasm");
@@ -300,6 +301,7 @@ export {{ incomingHandler }};
             source_dir,
             &["js", "ts", "toml"],
             &["node_modules", "dist"],
+            Some("js"),
         );
 
         if export && let Some(file_stem) = self.source_path.file_stem() {

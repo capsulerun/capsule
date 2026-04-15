@@ -51,8 +51,8 @@ pub fn generate_wasm_filename(source_path: &Path) -> String {
         .unwrap_or("capsule");
 
     let path_str = source_path.to_string_lossy();
-    let hash = blake3::hash(path_str.as_bytes()).to_hex();
-    let hash_str = hash.as_str();
+    let hashdata = blake3::hash(path_str.as_bytes()).to_hex();
+    let hash_str = hashdata.as_str();
     let short_hash = &hash_str[..8];
 
     format!("{stem}_{short_hash}.wasm")

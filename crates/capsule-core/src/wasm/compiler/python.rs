@@ -105,6 +105,7 @@ impl PythonWasmCompiler {
             &self.output_wasm,
             &["py", "toml"],
             &["__pycache__"],
+            Some("python"),
         ) {
             if export && let Some(file_stem) = self.source_path.file_stem() {
                 let export_path = source_dir.join(file_stem).with_extension("wasm");
@@ -195,6 +196,7 @@ from capsule.app import TaskRunner, exports
             source_dir,
             &["py", "toml"],
             &["__pycache__"],
+            Some("python"),
         );
 
         if export && let Some(file_stem) = self.source_path.file_stem() {

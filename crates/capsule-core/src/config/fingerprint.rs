@@ -12,8 +12,15 @@ pub struct SourceFingerprint {
 impl SourceFingerprint {
     const MANIFEST_FILENAME: &'static str = ".capsule_fingerprint.json";
 
-    pub fn load(cache_dir: &Path) -> Self {
-        let fingerprint_path = cache_dir.join(Self::MANIFEST_FILENAME);
+    fn manifest_filename(key: Option<&str>) -> String {
+        match key {
+            Some(k) => format!(".capsule_fingerprint_{}.json", k),
+            None => Self::MANIFEST_FILENAME.to_string(),
+        }
+    }
+
+    pub fn load(cache_dir: &Path, key: Option<&str>) -> Self {
+        let fingerprint_path = cache_dir.join(Self::manifest_filename(key));
 
         if fingerprint_path.exists()
             && let Ok(content) = fs::read_to_string(&fingerprint_path)
@@ -25,8 +32,8 @@ impl SourceFingerprint {
         Self::default()
     }
 
-    pub fn save(&self, cache_dir: &Path) -> std::io::Result<()> {
-        let fingerprint_path = cache_dir.join(Self::MANIFEST_FILENAME);
+    pub fn save(&self, cache_dir: &Path, key: Option<&str>) -> std::io::Result<()> {
+        let fingerprint_path = cache_dir.join(Self::manifest_filename(key));
         let content = serde_json::to_string_pretty(self)?;
         fs::write(fingerprint_path, content)
     }
@@ -114,14 +121,13 @@ impl SourceFingerprint {
         output_path: &Path,
         extensions: &[&str],
         ignored_dirs: &[&str],
+        key: Option<&str>,
     ) -> bool {
         if !output_path.exists() {
             return true;
         }
-        let previous = Self::load(cache_dir);
-
+        let previous = Self::load(cache_dir, key);
         let current = Self::build(source_dir, extensions, ignored_dirs);
-
         current.has_changes(&previous)
     }
 
@@ -130,9 +136,10 @@ impl SourceFingerprint {
         source_dir: &Path,
         extensions: &[&str],
         ignored_dirs: &[&str],
+        key: Option<&str>,
     ) -> std::io::Result<()> {
         let fingerprint = Self::build(source_dir, extensions, ignored_dirs);
-        fingerprint.save(cache_dir)
+        fingerprint.save(cache_dir, key)
     }
 }
 
