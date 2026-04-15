@@ -72,9 +72,8 @@ function getPreopenedDirs(): PreopenedDir[] {
 }
 
 function normalizePath(path: string): string {
-    if (path.startsWith('./')) {
-        return path.slice(2);
-    }
+    if (path.startsWith('./')) return path.slice(2);
+    if (path.startsWith('/')) return path.slice(1);
     return path;
 }
 
@@ -97,9 +96,11 @@ function resolvePath(path: string): { dir: Descriptor; relativePath: string } | 
 
     const normalizedPath = normalizePath(getEffectivePath(path));
 
+    const sorted = [...preopens].sort((a, b) => b.guestPath.length - a.guestPath.length);
+
     let catchAll: { dir: Descriptor; relativePath: string } | null = null;
 
-    for (const { descriptor, guestPath } of preopens) {
+    for (const { descriptor, guestPath } of sorted) {
         const normalizedGuest = normalizePath(guestPath);
 
         if (normalizedGuest === '.' || normalizedGuest === '') {
@@ -468,7 +469,7 @@ export function lstatSync(path: string): StatResult {
  */
 export function mkdirSync(path: string, options?: MkdirOptions): void {
     if (options?.recursive) {
-        const normalized = normalizePath(path);
+        const normalized = normalizePath(getEffectivePath(path));
         const parts = normalized.split('/').filter(Boolean);
         for (let i = 1; i <= parts.length; i++) {
             const partial = parts.slice(0, i).join('/');
@@ -724,7 +725,7 @@ export interface MkdirOptions {
  */
 export async function mkdir(path: string, options?: MkdirOptions): Promise<void> {
     if (options?.recursive) {
-        const normalized = normalizePath(path);
+        const normalized = normalizePath(getEffectivePath(path));
         const parts = normalized.split('/').filter(Boolean);
         for (let i = 1; i <= parts.length; i++) {
             const partial = parts.slice(0, i).join('/');
