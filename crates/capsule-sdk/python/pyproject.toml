@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "capsule"
-version = "0.8.7"
+version = "0.8.8"
 description = "Capsule Python SDK - run AI agent tasks in secure WASM sandboxes"
 readme = "README.md"
 requires-python = ">=3.10"
