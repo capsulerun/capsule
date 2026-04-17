@@ -77,8 +77,7 @@ class _WorkerClient:
         req_id = uuid.uuid4().hex
         request = json.dumps({"id": req_id, "file": file, "args": args, "mounts": mounts})
 
-        loop = asyncio.get_event_loop()
-        future: asyncio.Future[str] = loop.create_future()
+        future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
         self._pending[req_id] = future
 
         assert self._process and self._process.stdin
@@ -100,9 +99,7 @@ class _WorkerClient:
 
 
 _clients: dict[tuple[str, Optional[str]], _WorkerClient] = {}
-_clients_lock: Optional[asyncio.Lock] = None
 
-# Tracks capsule_path values where the binary was confirmed missing
 _unavailable: set[str] = set()
 
 
@@ -113,9 +110,12 @@ def _mark_unavailable(capsule_path: str) -> None:
 def _is_unavailable(capsule_path: str) -> bool:
     return capsule_path in _unavailable
 
+_clients_lock: Optional[asyncio.Lock] = None
+
 
 def _get_lock() -> asyncio.Lock:
     global _clients_lock
+
     if _clients_lock is None:
         _clients_lock = asyncio.Lock()
     return _clients_lock
