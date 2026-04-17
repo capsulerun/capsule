@@ -165,12 +165,12 @@ async def run_with_worker(
             )
         raise FileNotFoundError(f"File not found: {resolved_file}")
 
-    client = await _get_client(capsule_path, cwd)
+    client = await _get_client(capsule_path, cwd or os.getcwd())
 
     try:
         raw = await client.send(resolved_file, args, mounts)
     except RuntimeError:
-        key = (capsule_path, cwd)
+        key = (capsule_path, cwd or os.getcwd())
         _clients.pop(key, None)
         raise
 
@@ -190,5 +190,20 @@ async def close_all() -> None:
     """Close all active worker processes. Call on application shutdown."""
     for client in list(_clients.values()):
         await client.close()
-
     _clients.clear()
+
+
+# Automatically close workers on normal exit to avoid asyncio cleanup warnings on Windows
+import atexit
+
+def _close_all_sync() -> None:
+    """Close all workers synchronously (for atexit hook)."""
+    for client in _clients.values():
+        if client._process and client._process.returncode is None:
+            try:
+                client._process.terminate()
+            except Exception:
+                pass
+
+
+atexit.register(_close_all_sync)

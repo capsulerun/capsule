@@ -70,7 +70,7 @@ function getWorker(capsulePath: string, cwd: string): ChildProcess {
   let child: ChildProcess;
   if (process.platform === 'win32') {
     const comspec = process.env.comspec || 'cmd.exe';
-    child = spawn(comspec, ['/d', '/s', '/c', command, 'worker'], { cwd, stdio: ['pipe', 'pipe', 'inherit'] });
+    child = spawn(comspec, ['/d', '/s', '/k', command, 'worker'], { cwd, stdio: ['pipe', 'pipe', 'inherit'] });
   } else {
     child = spawn(command, ['worker'], { cwd, stdio: ['pipe', 'pipe', 'inherit'] });
   }
