@@ -1,5 +1,6 @@
 use std::fmt;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Instant;
 
 use capsule_core::config::manifest::{Manifest, ManifestError};
@@ -50,6 +51,17 @@ pub async fn execute(
     json: bool,
     verbose: bool,
 ) -> Result<String, ExecError> {
+    execute_with_runtime(wasm_path, args, mounts, json, verbose, None).await
+}
+
+pub async fn execute_with_runtime(
+    wasm_path: &Path,
+    args: Vec<String>,
+    mounts: Vec<String>,
+    json: bool,
+    verbose: bool,
+    shared_runtime: Option<Arc<Runtime>>,
+) -> Result<String, ExecError> {
     let ext = wasm_path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     if ext != "wasm" && ext != "cwasm" {
@@ -82,24 +94,27 @@ pub async fn execute(
 
     load_env_variables(&project_root).map_err(ExecError::IoError)?;
 
-    reporter.start_progress("Initializing runtime");
-
-    let capsule_toml = Manifest::new().map(|m| m.capsule_toml).unwrap_or_default();
-
-    let runtime_config = RuntimeConfig { cache_dir, verbose };
-
     let mut execution_policy = ExecutionPolicy::default().compute(Some(Compute::Custom(u64::MAX)));
 
     execution_policy.mounts.extend(mounts);
 
-    let runtime = Runtime::new(runtime_config, capsule_toml)?;
+    let runtime = match shared_runtime {
+        Some(r) => r,
+        None => {
+            reporter.start_progress("Initializing runtime");
+            let capsule_toml = Manifest::new().map(|m| m.capsule_toml).unwrap_or_default();
+            let runtime_config = RuntimeConfig { cache_dir, verbose };
+            let r = Runtime::new(runtime_config, capsule_toml)?;
+            reporter.finish_progress(Some("Runtime ready"));
+            r
+        }
+    };
 
     let create_instance_command = CreateInstance::new(execution_policy.clone(), args.clone())
         .wasm_path(wasm_path_abs)
         .project_root(project_root);
 
     let (store, instance, task_id) = runtime.execute(create_instance_command).await?;
-    reporter.finish_progress(Some("Runtime ready"));
 
     let start_time = Instant::now();
 

@@ -7,7 +7,7 @@ use std::path::Path;
 
 use cli::{Cli, Commands};
 use commands::shared::load_args_file;
-use commands::{BuildError, ExecError, RunError, build, exec, run};
+use commands::{BuildError, ExecError, RunError, build, exec, run, worker};
 
 #[derive(Debug)]
 pub enum CliError {
@@ -71,6 +71,11 @@ async fn main() -> Result<(), CliError> {
             {
                 println!("{}", result);
             }
+        }
+        Commands::Worker => {
+            worker::execute()
+                .await
+                .map_err(|e| CliError::RunError(e.to_string()))?;
         }
         Commands::Build { file, export } => {
             let file_path = file.as_deref().map(Path::new);
