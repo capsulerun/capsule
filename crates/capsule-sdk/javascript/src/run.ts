@@ -45,72 +45,80 @@ interface PendingRequest {
   reject: (err: Error) => void;
 }
 
-let workerProcess: ChildProcess | null = null;
-let workerCapsulePath: string | null = null;
+// Worker registry keyed by "capsulePath|cwd" to match Python SDK behaviour
+const workerRegistry = new Map<string, ChildProcess>();
 const pending = new Map<string, PendingRequest>();
 
-function getWorker(capsulePath: string): ChildProcess {
-  if (workerProcess && (workerCapsulePath !== capsulePath || workerProcess.exitCode !== null)) {
-    workerProcess.kill();
-    workerProcess = null;
+function workerKey(capsulePath: string, cwd: string): string {
+  return `${capsulePath}|${cwd}`;
+}
+
+function getWorker(capsulePath: string, cwd: string): ChildProcess {
+  const key = workerKey(capsulePath, cwd);
+  const existing = workerRegistry.get(key);
+
+  if (existing && existing.exitCode === null) {
+    return existing;
   }
 
-  if (!workerProcess) {
-    const command = getCapsuleCommand(capsulePath);
+  if (existing) {
+    existing.kill();
+    workerRegistry.delete(key);
+  }
 
-    let child: ChildProcess;
-    if (process.platform === 'win32') {
-      const comspec = process.env.comspec || 'cmd.exe';
-      child = spawn(comspec, ['/d', '/s', '/c', command, 'worker'], { stdio: ['pipe', 'pipe', 'inherit'] });
-    } else {
-      child = spawn(command, ['worker'], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const command = getCapsuleCommand(capsulePath);
+
+  let child: ChildProcess;
+  if (process.platform === 'win32') {
+    const comspec = process.env.comspec || 'cmd.exe';
+    child = spawn(comspec, ['/d', '/s', '/c', command, 'worker'], { cwd, stdio: ['pipe', 'pipe', 'inherit'] });
+  } else {
+    child = spawn(command, ['worker'], { cwd, stdio: ['pipe', 'pipe', 'inherit'] });
+  }
+
+  const rl = createInterface({ input: child.stdout! });
+  rl.on('line', (line) => {
+    let response: { id: string; output?: unknown; error?: string };
+    try {
+      response = JSON.parse(line);
+    } catch {
+      return;
     }
 
-    const rl = createInterface({ input: child.stdout! });
-    rl.on('line', (line) => {
-      let response: { id: string; output?: unknown; error?: string };
-      try {
-        response = JSON.parse(line);
-      } catch {
-        return;
-      }
+    const request = pending.get(response.id);
+    if (!request) return;
+    pending.delete(response.id);
 
-      const request = pending.get(response.id);
-      if (!request) return;
-      pending.delete(response.id);
+    if (response.error) {
+      request.reject(new Error(response.error));
+    } else {
+      request.resolve(response.output as RunnerResult);
+    }
+  });
 
-      if (response.error) {
-        request.reject(new Error(response.error));
-      } else {
-        request.resolve(response.output as RunnerResult);
-      }
-    });
+  child.on('exit', () => {
+    workerRegistry.delete(key);
+    for (const [id, req] of pending) {
+      req.reject(new Error('Capsule worker process exited unexpectedly'));
+      pending.delete(id);
+    }
+  });
 
-    child.on('exit', () => {
-      for (const [id, req] of pending) {
-        req.reject(new Error('Capsule worker process exited unexpectedly'));
-        pending.delete(id);
-      }
-      workerProcess = null;
-    });
+  child.on('error', (err) => {
+    workerRegistry.delete(key);
+    const message = (err as NodeJS.ErrnoException).code === 'ENOENT'
+      ? `Capsule CLI not found. Use 'npm install -g @capsule-run/cli' to install it.`
+      : err.message;
+    for (const [id, req] of pending) {
+      req.reject(new Error(message));
+      pending.delete(id);
+    }
+  });
 
-    child.on('error', (err) => {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-        for (const [id, req] of pending) {
-          req.reject(new Error(`Capsule CLI not found. Use 'npm install -g @capsule-run/cli' to install it.`));
-          pending.delete(id);
-        }
-      }
-      workerProcess = null;
-    });
+  workerRegistry.set(key, child);
+  process.once('exit', () => child.kill());
 
-    workerProcess = child;
-    workerCapsulePath = capsulePath;
-
-    process.once('exit', () => workerProcess?.kill());
-  }
-
-  return workerProcess;
+  return child;
 }
 
 function getCapsuleCommand(capsulePath: string): string {
@@ -129,11 +137,12 @@ function writeArgsFile(args: string[]): string {
 // --- run() via persistent worker ---
 
 function runViaWorker(options: RunnerOptions): Promise<RunnerResult> {
-  const { file, args = [], mounts = [], capsulePath = 'capsule' } = options;
+  const { file, args = [], mounts = [], cwd, capsulePath = 'capsule' } = options;
+  const resolvedCwd = cwd || process.cwd();
   const id = randomUUID();
-  console.time('runViaWorker' + id)
+
   return new Promise((resolve, reject) => {
-    const worker = getWorker(capsulePath);
+    const worker = getWorker(capsulePath, resolvedCwd);
 
     pending.set(id, { resolve, reject });
 
@@ -144,7 +153,6 @@ function runViaWorker(options: RunnerOptions): Promise<RunnerResult> {
         reject(new Error(`Failed to send task to worker: ${err.message}`));
       }
     });
-    console.timeEnd('runViaWorker' + id)
   });
 }
 
@@ -229,7 +237,14 @@ export async function run(options: RunnerOptions): Promise<RunnerResult> {
 
   try {
     return await runViaWorker(options);
-  } catch {
+  } catch (err) {
+    const msg = (err as Error).message ?? '';
+
+    const isTransport =
+      msg.includes('worker process exited') ||
+      msg.includes('CLI not found') ||
+      msg.includes('Failed to send task');
+    if (!isTransport) throw err;
     return runViaSubprocess(options);
   }
 }
