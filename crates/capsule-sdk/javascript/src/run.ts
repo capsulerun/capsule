@@ -5,11 +5,13 @@
  * from third party applications.
  */
 
-import { execFile } from 'child_process';
-import { resolve, extname, join } from 'path';
+import { execFile, spawn, ChildProcess } from 'child_process';
+import { resolve, extname } from 'path';
 import { existsSync, writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
+import { join } from 'path';
 import { randomUUID } from 'crypto';
+import { createInterface } from 'readline';
 import { HostRequest } from './task';
 
 export interface RunnerOptions {
@@ -35,11 +37,82 @@ export interface RunnerResult {
 }
 
 const WASM_EXTENSIONS = new Set(['.wasm']);
-const ARGS_FILE_THRESHOLD = 8 * 1024;
+const ARGS_FILE_THRESHOLD = 8 * 1024; // 8KB
 
-/**
- * Get the appropriate capsule command for the current platform
- */
+
+interface PendingRequest {
+  resolve: (result: RunnerResult) => void;
+  reject: (err: Error) => void;
+}
+
+let workerProcess: ChildProcess | null = null;
+let workerCapsulePath: string | null = null;
+const pending = new Map<string, PendingRequest>();
+
+function getWorker(capsulePath: string): ChildProcess {
+  if (workerProcess && (workerCapsulePath !== capsulePath || workerProcess.exitCode !== null)) {
+    workerProcess.kill();
+    workerProcess = null;
+  }
+
+  if (!workerProcess) {
+    const command = getCapsuleCommand(capsulePath);
+
+    let child: ChildProcess;
+    if (process.platform === 'win32') {
+      const comspec = process.env.comspec || 'cmd.exe';
+      child = spawn(comspec, ['/d', '/s', '/c', command, 'worker'], { stdio: ['pipe', 'pipe', 'inherit'] });
+    } else {
+      child = spawn(command, ['worker'], { stdio: ['pipe', 'pipe', 'inherit'] });
+    }
+
+    const rl = createInterface({ input: child.stdout! });
+    rl.on('line', (line) => {
+      let response: { id: string; output?: unknown; error?: string };
+      try {
+        response = JSON.parse(line);
+      } catch {
+        return;
+      }
+
+      const request = pending.get(response.id);
+      if (!request) return;
+      pending.delete(response.id);
+
+      if (response.error) {
+        request.reject(new Error(response.error));
+      } else {
+        request.resolve(response.output as RunnerResult);
+      }
+    });
+
+    child.on('exit', () => {
+      for (const [id, req] of pending) {
+        req.reject(new Error('Capsule worker process exited unexpectedly'));
+        pending.delete(id);
+      }
+      workerProcess = null;
+    });
+
+    child.on('error', (err) => {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        for (const [id, req] of pending) {
+          req.reject(new Error(`Capsule CLI not found. Use 'npm install -g @capsule-run/cli' to install it.`));
+          pending.delete(id);
+        }
+      }
+      workerProcess = null;
+    });
+
+    workerProcess = child;
+    workerCapsulePath = capsulePath;
+
+    process.once('exit', () => workerProcess?.kill());
+  }
+
+  return workerProcess;
+}
+
 function getCapsuleCommand(capsulePath: string): string {
   if (process.platform === 'win32' && !capsulePath.endsWith('.cmd')) {
     return `${capsulePath}.cmd`;
@@ -47,37 +120,43 @@ function getCapsuleCommand(capsulePath: string): string {
   return capsulePath;
 }
 
-/**
- * Write args to a temp file and return its path.
- * Caller is responsible for deleting it.
- */
 function writeArgsFile(args: string[]): string {
   const path = join(tmpdir(), `capsule-args-${randomUUID()}.json`);
   writeFileSync(path, JSON.stringify(args), 'utf-8');
   return path;
 }
 
-/**
- * Run a Capsule task from a third-party application
- *
- * @param options - Runner options
- * @returns Promise with the runner result
- */
-export function run(options: RunnerOptions): Promise<RunnerResult> {
+// --- run() via persistent worker ---
+
+function runViaWorker(options: RunnerOptions): Promise<RunnerResult> {
+  const { file, args = [], mounts = [], capsulePath = 'capsule' } = options;
+  const id = randomUUID();
+  console.time('runViaWorker' + id)
+  return new Promise((resolve, reject) => {
+    const worker = getWorker(capsulePath);
+
+    pending.set(id, { resolve, reject });
+
+    const request = JSON.stringify({ id, file, args, mounts }) + '\n';
+    worker.stdin!.write(request, (err) => {
+      if (err) {
+        pending.delete(id);
+        reject(new Error(`Failed to send task to worker: ${err.message}`));
+      }
+    });
+    console.timeEnd('runViaWorker' + id)
+  });
+}
+
+// --- run() via subprocess (fallback) ---
+
+function runViaSubprocess(options: RunnerOptions): Promise<RunnerResult> {
   const { file, args = [], mounts = [], cwd, capsulePath = 'capsule' } = options;
   const command = getCapsuleCommand(capsulePath);
 
   const resolvedFile = resolve(cwd || process.cwd(), file);
   const ext = extname(resolvedFile).toLowerCase();
   const isWasm = WASM_EXTENSIONS.has(ext);
-
-  if (!existsSync(resolvedFile)) {
-    const hint = isWasm
-      ? ` Run \`capsule build\` first to generate the .wasm artifact.`
-      : '';
-    return Promise.reject(new Error(`File not found: ${resolvedFile}.${hint}`));
-  }
-
   const subcommand = isWasm ? 'exec' : 'run';
   const mountFlags = mounts.flatMap(m => ['--mount', m]);
 
@@ -112,9 +191,7 @@ export function run(options: RunnerOptions): Promise<RunnerResult> {
 
       if (error && !stdout) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          reject(new Error(
-            `Capsule CLI not found. Use 'npm install -g @capsule-run/cli' to install it.`
-          ));
+          reject(new Error(`Capsule CLI not found. Use 'npm install -g @capsule-run/cli' to install it.`));
           return;
         }
         reject(new Error(stderr || error.message));
@@ -123,11 +200,36 @@ export function run(options: RunnerOptions): Promise<RunnerResult> {
 
       try {
         const lines = stdout.trim().split('\n');
-        const jsonLine = lines[lines.length - 1];
-        resolve(JSON.parse(jsonLine));
+        resolve(JSON.parse(lines[lines.length - 1]));
       } catch {
         reject(new Error(`Failed to parse Capsule output: ${stdout}`));
       }
     });
   });
+}
+
+/**
+ * Run a Capsule task from a third-party application.
+ * Uses a persistent worker process to avoid per-call subprocess spawn overhead.
+ *
+ * @param options - Runner options
+ * @returns Promise with the runner result
+ */
+export async function run(options: RunnerOptions): Promise<RunnerResult> {
+  const { file, cwd } = options;
+
+  const resolvedFile = resolve(cwd || process.cwd(), file);
+  const ext = extname(resolvedFile).toLowerCase();
+  const isWasm = WASM_EXTENSIONS.has(ext);
+
+  if (!existsSync(resolvedFile)) {
+    const hint = isWasm ? ` Run \`capsule build\` first to generate the .wasm artifact.` : '';
+    throw new Error(`File not found: ${resolvedFile}.${hint}`);
+  }
+
+  try {
+    return await runViaWorker(options);
+  } catch {
+    return runViaSubprocess(options);
+  }
 }

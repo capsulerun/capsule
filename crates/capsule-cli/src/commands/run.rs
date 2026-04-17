@@ -1,5 +1,6 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Instant;
 
 use capsule_core::config::manifest::{CapsuleToml, Manifest, ManifestError};
@@ -69,6 +70,17 @@ pub async fn execute(
     json: bool,
     verbose: bool,
 ) -> Result<String, RunError> {
+    execute_with_runtime(file_path, args, mounts, json, verbose, None).await
+}
+
+pub async fn execute_with_runtime(
+    file_path: Option<&Path>,
+    args: Vec<String>,
+    mounts: Vec<String>,
+    json: bool,
+    verbose: bool,
+    shared_runtime: Option<Arc<Runtime>>,
+) -> Result<String, RunError> {
     let manifest = Manifest::new()?;
     let mut reporter = TaskReporter::new(!json);
 
@@ -81,8 +93,6 @@ pub async fn execute(
     let compile_result = compile_to_wasm(&file_path, false)?;
     reporter.finish_progress(Some("Environment ready"));
 
-    reporter.start_progress("Initializing runtime");
-
     let project_root = std::env::current_dir().unwrap_or_else(|_| {
         file_path
             .canonicalize()
@@ -93,25 +103,29 @@ pub async fn execute(
 
     load_env_variables(&project_root).map_err(RunError::IoError)?;
 
-    let runtime_config = RuntimeConfig {
-        cache_dir: compile_result.cache_dir,
-        verbose,
-    };
-
     let mut execution_policy =
         extract_main_execution_policy(compile_result.task_registry, &manifest.capsule_toml)
             .unwrap_or_else(|| ExecutionPolicy::default().compute(Some(Compute::Custom(u64::MAX))));
 
     execution_policy.mounts.extend(mounts);
 
-    let runtime = Runtime::new(runtime_config, manifest.capsule_toml)?;
+    let runtime = match shared_runtime {
+        Some(r) => r,
+        None => {
+            reporter.start_progress("Initializing runtime");
+            let runtime_config = RuntimeConfig {
+                cache_dir: compile_result.cache_dir,
+                verbose,
+            };
+            Runtime::new(runtime_config, manifest.capsule_toml)?
+        }
+    };
 
     let create_instance_command = CreateInstance::new(execution_policy.clone(), args.clone())
         .wasm_path(compile_result.wasm_path)
         .project_root(project_root);
 
     let (store, instance, task_id) = runtime.execute(create_instance_command).await?;
-    reporter.finish_progress(Some("Runtime ready"));
 
     let start_time = Instant::now();
 

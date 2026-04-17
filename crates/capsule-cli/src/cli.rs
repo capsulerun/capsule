@@ -35,6 +35,7 @@ pub enum Commands {
         #[arg(long)]
         export: bool,
     },
+    Worker,
     Exec {
         file: String,
 

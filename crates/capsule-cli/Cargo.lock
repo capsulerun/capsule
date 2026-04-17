@@ -356,6 +356,7 @@ dependencies = [
  "capsule-core",
  "clap",
  "dotenvy",
+ "serde",
  "serde_json",
  "tokio",
 ]
