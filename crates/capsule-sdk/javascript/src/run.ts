@@ -45,7 +45,6 @@ interface PendingRequest {
   reject: (err: Error) => void;
 }
 
-// Worker registry keyed by "capsulePath|cwd" to match Python SDK behaviour
 const workerRegistry = new Map<string, ChildProcess>();
 const pending = new Map<string, PendingRequest>();
 
