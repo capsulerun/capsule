@@ -63,15 +63,21 @@ async def run(
 ) -> RunnerResult:
     """Run a Capsule task from a third-party application.
 
+    Uses a persistent worker process for low latency (7-10ms per call).
+    Falls back to spawning a subprocess if the worker is unavailable.
+
     Args:
         file: Path to the source file or pre-built .wasm artifact
         args: Arguments to pass to the task's main function
+        mounts: Mount specs (HOST[::GUEST][:ro|:rw])
         cwd: Working directory (used to resolve relative paths)
         capsule_path: Path to the capsule CLI binary
 
     Returns:
         RunnerResult with task result and execution metadata
     """
+    from .worker import run_with_worker, _mark_unavailable, _is_unavailable
+
     args = args or []
     mounts = mounts or []
 
@@ -93,6 +99,39 @@ async def run(
             )
         raise FileNotFoundError(f"File not found: {resolved_file}")
 
+    if not _is_unavailable(capsule_path):
+        try:
+            return await run_with_worker(
+                file=file,
+                args=args,
+                mounts=mounts,
+                cwd=cwd,
+                capsule_path=capsule_path,
+            )
+        except FileNotFoundError:
+            _mark_unavailable(capsule_path)
+        except Exception:
+            pass
+
+    return await _run_subprocess(
+        resolved_file=resolved_file,
+        ext=ext,
+        args=args,
+        mounts=mounts,
+        cwd=cwd,
+        capsule_path=capsule_path,
+    )
+
+
+async def _run_subprocess(
+    *,
+    resolved_file: str,
+    ext: str,
+    args: list[str],
+    mounts: list[str],
+    cwd: Optional[str],
+    capsule_path: str,
+) -> RunnerResult:
     subcommand = "exec" if ext in _WASM_EXTENSIONS else "run"
     mount_flags = [flag for m in mounts for flag in ("--mount", m)]
 
