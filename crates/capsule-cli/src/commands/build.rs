@@ -11,7 +11,7 @@ use capsule_core::wasm::compiler::python::{PythonWasmCompiler, PythonWasmCompile
 use capsule_core::wasm::runtime::Runtime;
 use capsule_core::wasm::runtime::RuntimeConfig;
 use capsule_core::wasm::runtime::WasmRuntimeError;
-use capsule_core::wasm::utilities::task_reporter::TaskReporter;
+use capsule_core::wasm::utilities::task_reporter::{LogLevel, TaskReporter};
 
 pub enum BuildError {
     IoError(String),
@@ -103,7 +103,7 @@ pub fn compile_to_wasm(file_path: &Path, export: bool) -> Result<CompileResult, 
 
 pub async fn execute(file_path: Option<&Path>, export: bool) -> Result<PathBuf, BuildError> {
     let manifest = Manifest::new()?;
-    let mut reporter = TaskReporter::new(true);
+    let mut reporter = TaskReporter::new(LogLevel::Verbose);
 
     let file_path: PathBuf = match file_path {
         Some(path) => path.to_path_buf(),
@@ -118,7 +118,7 @@ pub async fn execute(file_path: Option<&Path>, export: bool) -> Result<PathBuf, 
 
     let runtime_config = RuntimeConfig {
         cache_dir: compile_result.cache_dir,
-        verbose: true,
+        log_level: LogLevel::Verbose,
     };
     let runtime = Runtime::new(runtime_config, manifest.capsule_toml)?;
     let cwasm_path = runtime.precompile(&compile_result.wasm_path)?;

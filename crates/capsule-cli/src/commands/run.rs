@@ -10,7 +10,7 @@ use capsule_core::wasm::commands::run::RunInstance;
 use capsule_core::wasm::execution_policy::{Compute, ExecutionPolicy};
 use capsule_core::wasm::runtime::{Runtime, RuntimeConfig, WasmRuntimeError};
 use capsule_core::wasm::utilities::task_config::TaskConfig;
-use capsule_core::wasm::utilities::task_reporter::TaskReporter;
+use capsule_core::wasm::utilities::task_reporter::{LogLevel, TaskReporter};
 use tokio::sync::Mutex;
 
 use crate::build::{BuildError, TaskRegistry, compile_to_wasm};
@@ -79,18 +79,21 @@ async fn resolve_wasm(
         }
 
         reporter.start_progress("Preparing environment");
+
         let compile_result = tokio::task::spawn_blocking({
             let file_path = file_path.to_path_buf();
             move || compile_to_wasm(&file_path, false)
         })
         .await
         .map_err(|e| RunError::IoError(e.to_string()))??;
+
         reporter.finish_progress(Some("Environment ready"));
 
         cache
             .lock()
             .await
             .insert(cache_key, compile_result.wasm_path.clone());
+
         Ok((
             compile_result.wasm_path,
             compile_result.task_registry,
@@ -98,12 +101,14 @@ async fn resolve_wasm(
         ))
     } else {
         reporter.start_progress("Preparing environment");
+
         let compile_result = tokio::task::spawn_blocking({
             let file_path = file_path.to_path_buf();
             move || compile_to_wasm(&file_path, false)
         })
         .await
         .map_err(|e| RunError::IoError(e.to_string()))??;
+
         reporter.finish_progress(Some("Environment ready"));
 
         Ok((
@@ -124,7 +129,16 @@ pub async fn execute(
     wasm_cache: Option<Arc<Mutex<HashMap<String, PathBuf>>>>,
 ) -> Result<String, RunError> {
     let manifest = Manifest::new()?;
-    let mut reporter = TaskReporter::new(!json);
+
+    let log_level = if json {
+        LogLevel::Silent
+    } else if verbose {
+        LogLevel::Verbose
+    } else {
+        LogLevel::Normal
+    };
+
+    let mut reporter = TaskReporter::new(log_level.clone());
 
     let file_path: PathBuf = match file_path {
         Some(path) => path.to_path_buf(),
@@ -154,7 +168,7 @@ pub async fn execute(
         None => {
             reporter.start_progress("Initializing runtime");
 
-            let runtime_config = RuntimeConfig { cache_dir, verbose };
+            let runtime_config = RuntimeConfig { cache_dir, log_level };
             let runtime = Runtime::new(runtime_config, manifest.capsule_toml)?;
 
             reporter.finish_progress(Some("Runtime ready"));

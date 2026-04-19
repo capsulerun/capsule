@@ -8,7 +8,7 @@ use capsule_core::wasm::commands::create::CreateInstance;
 use capsule_core::wasm::commands::run::RunInstance;
 use capsule_core::wasm::execution_policy::{Compute, ExecutionPolicy};
 use capsule_core::wasm::runtime::{Runtime, RuntimeConfig, WasmRuntimeError};
-use capsule_core::wasm::utilities::task_reporter::TaskReporter;
+use capsule_core::wasm::utilities::task_reporter::{LogLevel, TaskReporter};
 
 use crate::commands::shared::load_env_variables;
 
@@ -68,7 +68,15 @@ pub async fn execute(
         )));
     }
 
-    let mut reporter = TaskReporter::new(!json);
+    let log_level = if json {
+        LogLevel::Silent
+    } else if verbose {
+        LogLevel::Verbose
+    } else {
+        LogLevel::Normal
+    };
+
+    let mut reporter = TaskReporter::new(log_level.clone());
 
     let wasm_path_abs = wasm_path
         .canonicalize()
@@ -94,7 +102,7 @@ pub async fn execute(
             reporter.start_progress("Initializing runtime");
 
             let capsule_toml = Manifest::new().map(|m| m.capsule_toml).unwrap_or_default();
-            let runtime_config = RuntimeConfig { cache_dir, verbose };
+            let runtime_config = RuntimeConfig { cache_dir, log_level };
             let runtime = Runtime::new(runtime_config, capsule_toml)?;
 
             reporter.finish_progress(Some("Runtime ready"));

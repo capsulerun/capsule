@@ -10,7 +10,7 @@ use wasmtime::{Config, Engine};
 use crate::config::log::{Log, LogError};
 use crate::config::manifest::CapsuleToml;
 use crate::wasm::utilities::cache::precompile_component;
-use crate::wasm::utilities::task_reporter::TaskReporter;
+use crate::wasm::utilities::task_reporter::{LogLevel, TaskReporter};
 
 pub enum WasmRuntimeError {
     WasmtimeError(wasmtime::Error),
@@ -62,14 +62,14 @@ pub trait RuntimeCommand {
 
 pub struct RuntimeConfig {
     pub cache_dir: PathBuf,
-    pub verbose: bool,
+    pub log_level: LogLevel,
 }
 
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
             cache_dir: PathBuf::from(".capsule"),
-            verbose: false,
+            log_level: LogLevel::Normal
         }
     }
 }
@@ -81,7 +81,7 @@ pub struct Runtime {
     #[allow(dead_code)]
     pub(crate) cache_dir: PathBuf,
 
-    pub verbose: bool,
+    pub log_level: LogLevel,
 
     component: RwLock<HashMap<PathBuf, Component>>,
     pub task_reporter: Arc<Mutex<TaskReporter>>,
@@ -114,13 +114,13 @@ impl Runtime {
         engine_config.async_support(true);
         engine_config.consume_fuel(true);
 
-        let task_reporter = Arc::new(Mutex::new(TaskReporter::new(config.verbose)));
+        let task_reporter = Arc::new(Mutex::new(TaskReporter::new(config.log_level.clone())));
 
         Ok(Arc::new(Self {
             engine: Engine::new(&engine_config)?,
             log,
             cache_dir: config.cache_dir,
-            verbose: config.verbose,
+            log_level: config.log_level,
             component: RwLock::new(HashMap::new()),
             task_reporter,
             capsule_toml,

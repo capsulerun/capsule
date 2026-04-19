@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use capsule_core::config::manifest::Manifest;
 use capsule_core::wasm::runtime::{Runtime, RuntimeConfig};
+use capsule_core::wasm::utilities::task_reporter::LogLevel;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::{Mutex, mpsc};
@@ -67,7 +68,7 @@ pub async fn execute() -> Result<(), WorkerError> {
     let capsule_toml = Manifest::new().map(|m| m.capsule_toml).unwrap_or_default();
     let runtime_config = RuntimeConfig {
         cache_dir,
-        verbose: false,
+        log_level: LogLevel::Silent,
     };
 
     let runtime = Runtime::new(runtime_config, capsule_toml)
