@@ -62,8 +62,6 @@ class _WorkerClient:
                     future.set_exception(RuntimeError("capsule worker process exited unexpectedly"))
             self._pending.clear()
 
-            # Terminate and wait for the subprocess so the asyncio child-watcher
-            # can reap it before loop.close() returns, preventing a hang on exit.
             proc = self._process
             if proc is not None and proc.returncode is None:
                 try:
@@ -214,7 +212,6 @@ async def close_all() -> None:
     _clients.clear()
 
 
-# Automatically close workers on normal exit to avoid asyncio cleanup warnings on Windows
 import atexit
 
 def _close_all_sync() -> None:
