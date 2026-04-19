@@ -78,7 +78,7 @@ function normalizePath(path: string): string {
     else if (p.startsWith('/')) p = p.slice(1);
     if (p.length > 1) p = p.replace(/\/+$/, '');
 
-    return p;
+    return p || '.';
 }
 
 /**

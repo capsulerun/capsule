@@ -73,7 +73,6 @@ pub async fn execute() -> Result<(), WorkerError> {
     let runtime = Runtime::new(runtime_config, capsule_toml)
         .map_err(|e| WorkerError::RuntimeError(e.to_string()))?;
 
-    // Cache wasm_path per source file so fingerprint checks only run once per file.
     let wasm_cache: Arc<Mutex<HashMap<String, PathBuf>>> = Arc::new(Mutex::new(HashMap::new()));
 
     let stdin = tokio::io::stdin();
