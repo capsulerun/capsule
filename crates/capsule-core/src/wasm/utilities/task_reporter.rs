@@ -6,17 +6,24 @@ use chrono::Utc;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum LogLevel {
+    Verbose,
+    Normal,
+    Silent,
+}
+
 pub struct TaskReporter {
-    verbose: bool,
+    log_level: LogLevel,
     start_time: Instant,
     spinner: Option<ProgressBar>,
     is_active: Arc<AtomicBool>,
 }
 
 impl TaskReporter {
-    pub fn new(verbose: bool) -> Self {
+    pub fn new(log_level: LogLevel) -> Self {
         Self {
-            verbose,
+            log_level,
             start_time: Instant::now(),
             spinner: None,
             is_active: Arc::new(AtomicBool::new(false)),
@@ -37,9 +44,13 @@ impl TaskReporter {
     }
 
     pub fn task_running(&mut self, task_name: &str, _task_id: &str) {
+        if self.log_level == LogLevel::Silent {
+            return;
+        }
+
         self.finish_spinner();
         self.start_time = Instant::now();
-        if self.verbose {
+        if self.log_level == LogLevel::Verbose {
             eprintln!(
                 "{} {} [{}] task execution started",
                 Self::timestamp(),
@@ -50,8 +61,12 @@ impl TaskReporter {
     }
 
     pub fn task_completed(&mut self, task_name: &str) {
+        if self.log_level == LogLevel::Silent {
+            return;
+        }
+
         self.finish_spinner();
-        if self.verbose {
+        if self.log_level == LogLevel::Verbose {
             let elapsed = self.start_time.elapsed();
             let time_str = self.format_duration(elapsed);
             eprintln!(
@@ -65,8 +80,12 @@ impl TaskReporter {
     }
 
     pub fn task_completed_with_time(&mut self, task_name: &str, elapsed: Duration) {
+        if self.log_level == LogLevel::Silent {
+            return;
+        }
+
         self.finish_spinner();
-        if self.verbose {
+        if self.log_level == LogLevel::Verbose {
             let time_str = self.format_duration(elapsed);
             eprintln!(
                 "{} {} [{}] Completed in {}",
@@ -79,8 +98,12 @@ impl TaskReporter {
     }
 
     pub fn task_failed(&mut self, task_name: &str, error: &str) {
+        if self.log_level == LogLevel::Silent {
+            return;
+        }
+
         self.finish_spinner();
-        if self.verbose {
+        if self.log_level == LogLevel::Verbose {
             eprintln!(
                 "{} {} [{}] {}",
                 Self::timestamp(),
@@ -94,8 +117,12 @@ impl TaskReporter {
     }
 
     pub fn task_timeout(&mut self, task_name: &str) {
+        if self.log_level == LogLevel::Silent {
+            return;
+        }
+
         self.finish_spinner();
-        if self.verbose {
+        if self.log_level == LogLevel::Verbose {
             eprintln!(
                 "{} {} [{}] Timed out",
                 Self::timestamp(),
@@ -108,44 +135,42 @@ impl TaskReporter {
     }
 
     pub fn start_progress(&mut self, message: &str) {
-        if self.verbose {
-            self.start_time = Instant::now();
-            self.spinner = Some(self.create_spinner(message));
-            self.is_active.store(true, Ordering::SeqCst);
+        if self.log_level == LogLevel::Silent {
+            return;
         }
-    }
 
-    pub fn update_progress(&mut self, message: &str) {
-        if let Some(spinner) = &self.spinner {
-            spinner.set_message(message.to_string());
-        }
+        self.start_time = Instant::now();
+        self.spinner = Some(self.create_spinner(message));
+        self.is_active.store(true, Ordering::SeqCst);
     }
 
     pub fn finish_progress(&mut self, completion_message: Option<&str>) {
+        if self.log_level == LogLevel::Silent {
+            return;
+        }
+
         self.finish_spinner();
         let elapsed = self.start_time.elapsed();
         let time_str = self.format_duration(elapsed);
 
-        if let Some(msg) = completion_message
-            && self.verbose
-        {
+        if let Some(msg) = completion_message {
             eprintln!("{} {} ({})", "✓".green(), msg.green(), time_str);
         }
     }
 
-    pub fn info(&self, message: &str) {
-        if self.verbose {
-            eprintln!("{}", message);
-        }
-    }
-
     pub fn success(&self, message: &str) {
-        if self.verbose {
-            eprintln!("{}", message.green());
+        if self.log_level == LogLevel::Silent {
+            return;
         }
+
+        eprintln!("{}", message.green());
     }
 
     pub fn error(&self, message: &str) {
+        if self.log_level == LogLevel::Silent {
+            return;
+        }
+
         eprintln!("{}", message.red());
     }
 
@@ -195,43 +220,43 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let reporter = TaskReporter::new(true);
-        assert!(reporter.verbose);
+        let reporter = TaskReporter::new(LogLevel::Verbose);
+        assert_eq!(reporter.log_level, LogLevel::Verbose);
         assert!(reporter.spinner.is_none());
         assert!(!reporter.is_active.load(Ordering::SeqCst));
     }
 
     #[test]
     fn test_format_duration_seconds() {
-        let reporter = TaskReporter::new(false);
+        let reporter = TaskReporter::new(LogLevel::Normal);
         let duration = Duration::from_secs_f64(45.67);
         assert_eq!(reporter.format_duration(duration), "45.67s");
     }
 
     #[test]
     fn test_format_duration_minutes() {
-        let reporter = TaskReporter::new(false);
+        let reporter = TaskReporter::new(LogLevel::Normal);
         let duration = Duration::from_secs(125);
         assert_eq!(reporter.format_duration(duration), "2m 5s");
     }
 
     #[test]
     fn test_format_duration_hours() {
-        let reporter = TaskReporter::new(false);
+        let reporter = TaskReporter::new(LogLevel::Normal);
         let duration = Duration::from_secs(3665);
         assert_eq!(reporter.format_duration(duration), "1h 1m 5s");
     }
 
     #[test]
     fn test_task_running_sets_active() {
-        let mut reporter = TaskReporter::new(true);
+        let mut reporter = TaskReporter::new(LogLevel::Normal);
         reporter.task_running("test_task", "task_123");
         assert!(!reporter.is_active.load(Ordering::SeqCst));
     }
 
     #[test]
     fn test_finish_spinner_clears_active() {
-        let mut reporter = TaskReporter::new(true);
+        let mut reporter = TaskReporter::new(LogLevel::Normal);
         reporter.start_progress("test");
         reporter.finish_spinner();
         assert!(!reporter.is_active.load(Ordering::SeqCst));

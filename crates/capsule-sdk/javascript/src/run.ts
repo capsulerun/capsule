@@ -11,7 +11,6 @@ import { existsSync, writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
-import { createInterface } from 'readline';
 import { HostRequest } from './task';
 
 export interface RunnerOptions {
@@ -36,9 +35,8 @@ export interface RunnerResult {
   };
 }
 
-const WASM_EXTENSIONS = new Set(['.wasm']);
-const ARGS_FILE_THRESHOLD = 8 * 1024; // 8KB
-
+const WASM_EXTENSIONS = new Set(['.wasm', '.cwasm']);
+const ARGS_FILE_THRESHOLD = 8 * 1024;
 
 interface PendingRequest {
   resolve: (result: RunnerResult) => void;
@@ -47,6 +45,7 @@ interface PendingRequest {
 
 const workerRegistry = new Map<string, ChildProcess>();
 const pending = new Map<string, PendingRequest>();
+const workerStdout = new Map<string, any>();
 
 function workerKey(capsulePath: string, cwd: string): string {
   return `${capsulePath}|${cwd}`;
@@ -63,6 +62,7 @@ function getWorker(capsulePath: string, cwd: string): ChildProcess {
   if (existing) {
     existing.kill();
     workerRegistry.delete(key);
+    workerStdout.delete(key);
   }
 
   const command = getCapsuleCommand(capsulePath);
@@ -70,33 +70,48 @@ function getWorker(capsulePath: string, cwd: string): ChildProcess {
   let child: ChildProcess;
   if (process.platform === 'win32') {
     const comspec = process.env.comspec || 'cmd.exe';
-    child = spawn(comspec, ['/d', '/s', '/c', command, 'worker'], { cwd, stdio: ['pipe', 'pipe', 'inherit'] });
+    child = spawn(comspec, ['/d', '/s', '/k', command, 'worker'], { cwd, stdio: ['pipe', 'pipe', 'inherit'] });
   } else {
     child = spawn(command, ['worker'], { cwd, stdio: ['pipe', 'pipe', 'inherit'] });
   }
 
-  const rl = createInterface({ input: child.stdout! });
-  rl.on('line', (line) => {
-    let response: { id: string; output?: unknown; error?: string };
-    try {
-      response = JSON.parse(line);
-    } catch {
-      return;
-    }
+  workerStdout.set(key, child.stdout);
 
-    const request = pending.get(response.id);
-    if (!request) return;
-    pending.delete(response.id);
+  let lineBuffer = '';
+  child.stdout!.on('data', (chunk: Buffer) => {
+    lineBuffer += chunk.toString();
+    let nl: number;
 
-    if (response.error) {
-      request.reject(new Error(response.error));
-    } else {
-      request.resolve(response.output as RunnerResult);
+    while ((nl = lineBuffer.indexOf('\n')) !== -1) {
+      const line = lineBuffer.slice(0, nl);
+      lineBuffer = lineBuffer.slice(nl + 1);
+
+      let response: { id: string; output?: unknown; error?: string };
+
+      try {
+        response = JSON.parse(line);
+      } catch {
+        continue;
+      }
+
+      const request = pending.get(response.id);
+
+      if (!request) continue;
+      pending.delete(response.id);
+
+      if (pending.size === 0) workerStdout.get(key)?.unref?.();
+
+      if (response.error) {
+        request.reject(new Error(response.error));
+      } else {
+        request.resolve(response.output as RunnerResult);
+      }
     }
   });
 
   child.on('exit', () => {
     workerRegistry.delete(key);
+    workerStdout.delete(key);
     for (const [id, req] of pending) {
       req.reject(new Error('Capsule worker process exited unexpectedly'));
       pending.delete(id);
@@ -105,6 +120,7 @@ function getWorker(capsulePath: string, cwd: string): ChildProcess {
 
   child.on('error', (err) => {
     workerRegistry.delete(key);
+    workerStdout.delete(key);
     const message = (err as NodeJS.ErrnoException).code === 'ENOENT'
       ? `Capsule CLI not found. Use 'npm install -g @capsule-run/cli' to install it.`
       : err.message;
@@ -116,6 +132,9 @@ function getWorker(capsulePath: string, cwd: string): ChildProcess {
 
   workerRegistry.set(key, child);
   process.once('exit', () => child.kill());
+
+  child.unref();
+  (child.stdout as any).unref();
 
   return child;
 }
@@ -138,17 +157,20 @@ function writeArgsFile(args: string[]): string {
 function runViaWorker(options: RunnerOptions): Promise<RunnerResult> {
   const { file, args = [], mounts = [], cwd, capsulePath = 'capsule' } = options;
   const resolvedCwd = cwd || process.cwd();
+  const key = workerKey(capsulePath, resolvedCwd);
   const id = randomUUID();
 
   return new Promise((resolve, reject) => {
     const worker = getWorker(capsulePath, resolvedCwd);
-
     pending.set(id, { resolve, reject });
+
+    workerStdout.get(key)?.ref?.();
 
     const request = JSON.stringify({ id, file, args, mounts }) + '\n';
     worker.stdin!.write(request, (err) => {
       if (err) {
         pending.delete(id);
+        if (pending.size === 0) workerStdout.get(key)?.unref?.();
         reject(new Error(`Failed to send task to worker: ${err.message}`));
       }
     });

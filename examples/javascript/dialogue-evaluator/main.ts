@@ -25,7 +25,8 @@ const insertDialogueLine = task({
 
 const evaluateDialogueLine = task({
     name: "Evaluate Dialogue Line",
-    envVariables: ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL"]
+    envVariables: ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL"],
+    allowedHosts: ["*"],
 }, async (prompt: string): Promise<string> => {
 
     const openai = new OpenAI({

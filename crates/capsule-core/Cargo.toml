@@ -1,6 +1,6 @@
 [package]
 name = "capsule-core"
-version = "0.8.8"
+version = "0.8.9"
 edition = "2024"
 description = "Core library for Capsule - WASM runtime for AI agent isolation"
 license = "Apache-2.0"

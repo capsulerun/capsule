@@ -1,6 +1,6 @@
 [package]
 name = "capsule-run"
-version = "0.8.8"
+version = "0.8.9"
 edition = "2024"
 description = "Secure WASM runtime to isolate and manage AI agent tasks"
 license = "Apache-2.0"
@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
-capsule-core = { version= "0.8.8", path = "../capsule-core" }
+capsule-core = { version= "0.8.9", path = "../capsule-core" }
 tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "io-util", "sync"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

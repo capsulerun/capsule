@@ -39,28 +39,47 @@ class _WorkerClient:
 
     async def _reader_loop(self) -> None:
         assert self._process and self._process.stdout
-        while True:
-            try:
-                line = await self._process.stdout.readline()
-            except Exception:
-                break
+        try:
+            while True:
+                try:
+                    line = await self._process.stdout.readline()
+                except Exception:
+                    break
 
-            if not line:
-                break
-            try:
-                response = json.loads(line.decode("utf-8"))
-                req_id = response.get("id")
-                future = self._pending.pop(req_id, None)
-                if future and not future.done():
-                    future.set_result(line.decode("utf-8"))
-            except Exception:
-                continue
+                if not line:
+                    break
+                try:
+                    response = json.loads(line.decode("utf-8"))
+                    req_id = response.get("id")
+                    future = self._pending.pop(req_id, None)
+                    if future and not future.done():
+                        future.set_result(line.decode("utf-8"))
+                except Exception:
+                    continue
+        finally:
+            for future in self._pending.values():
+                if not future.done():
+                    future.set_exception(RuntimeError("capsule worker process exited unexpectedly"))
+            self._pending.clear()
 
-        for future in self._pending.values():
-            if not future.done():
-                future.set_exception(RuntimeError("capsule worker process exited unexpectedly"))
-
-        self._pending.clear()
+            proc = self._process
+            if proc is not None and proc.returncode is None:
+                try:
+                    if proc.stdin:
+                        proc.stdin.close()
+                except Exception:
+                    pass
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+                try:
+                    await asyncio.shield(asyncio.wait_for(proc.wait(), timeout=3.0))
+                except Exception:
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
 
     async def _ensure_running(self) -> None:
         async with self._lock:
@@ -165,12 +184,12 @@ async def run_with_worker(
             )
         raise FileNotFoundError(f"File not found: {resolved_file}")
 
-    client = await _get_client(capsule_path, cwd)
+    client = await _get_client(capsule_path, cwd or os.getcwd())
 
     try:
         raw = await client.send(resolved_file, args, mounts)
     except RuntimeError:
-        key = (capsule_path, cwd)
+        key = (capsule_path, cwd or os.getcwd())
         _clients.pop(key, None)
         raise
 
@@ -190,5 +209,20 @@ async def close_all() -> None:
     """Close all active worker processes. Call on application shutdown."""
     for client in list(_clients.values()):
         await client.close()
-
     _clients.clear()
+
+
+import atexit
+
+def _close_all_sync() -> None:
+    """Close all workers synchronously (for atexit hook)."""
+    for client in _clients.values():
+        proc = client._process
+        if proc and proc.returncode is None:
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+
+
+atexit.register(_close_all_sync)

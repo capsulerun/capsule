@@ -159,6 +159,7 @@ impl RuntimeCommand for CreateInstance {
             limits,
             runtime: Some(Arc::clone(&runtime)),
             policy: self.policy.clone(),
+            wasm_path: self.wasm_path.clone(),
             peak_memory_bytes: 0,
             host_requests: Vec::new(),
         };
@@ -169,7 +170,7 @@ impl RuntimeCommand for CreateInstance {
 
         store.limiter(|state| state);
 
-        let component = match runtime.get_component().await {
+        let component = match runtime.get_component(&self.wasm_path).await {
             Some(c) => c,
             None => {
                 let file_name = self.wasm_path.file_name().unwrap_or_default();
@@ -178,10 +179,13 @@ impl RuntimeCommand for CreateInstance {
                     .join("wasm")
                     .join(std::path::Path::new(file_name).with_extension("cwasm"));
 
-                let c = load_or_compile_component(&runtime.engine, &self.wasm_path, &cwasm_path)?;
+                let component =
+                    load_or_compile_component(&runtime.engine, &self.wasm_path, &cwasm_path)?;
 
-                runtime.set_component(c.clone()).await;
-                c
+                runtime
+                    .set_component(self.wasm_path.clone(), component.clone())
+                    .await;
+                component
             }
         };
 

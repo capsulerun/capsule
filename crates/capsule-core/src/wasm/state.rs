@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -36,6 +37,7 @@ pub struct State {
     pub limits: StoreLimits,
     pub runtime: Option<Arc<Runtime>>,
     pub policy: ExecutionPolicy,
+    pub wasm_path: PathBuf,
     pub peak_memory_bytes: u64,
     pub host_requests: Vec<HostRequest>,
 }
@@ -112,7 +114,9 @@ impl Host for State {
         let mut last_error: Option<String> = None;
 
         for attempt in 0..=max_retries {
-            let create_cmd = CreateInstance::new(policy.clone(), vec![]).task_name(&name);
+            let create_cmd = CreateInstance::new(policy.clone(), vec![])
+                .task_name(&name)
+                .wasm_path(self.wasm_path.clone());
 
             let (store, instance, task_id) = match runtime.execute(create_cmd).await {
                 Ok(result) => result,

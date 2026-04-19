@@ -1,12 +1,14 @@
+use std::collections::HashMap;
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use capsule_core::config::manifest::Manifest;
 use capsule_core::wasm::runtime::{Runtime, RuntimeConfig};
+use capsule_core::wasm::utilities::task_reporter::LogLevel;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::sync::mpsc;
+use tokio::sync::{Mutex, mpsc};
 
 use crate::commands::exec::ExecError;
 use crate::commands::run::RunError;
@@ -66,11 +68,13 @@ pub async fn execute() -> Result<(), WorkerError> {
     let capsule_toml = Manifest::new().map(|m| m.capsule_toml).unwrap_or_default();
     let runtime_config = RuntimeConfig {
         cache_dir,
-        verbose: false,
+        log_level: LogLevel::Silent,
     };
 
     let runtime = Runtime::new(runtime_config, capsule_toml)
         .map_err(|e| WorkerError::RuntimeError(e.to_string()))?;
+
+    let wasm_cache: Arc<Mutex<HashMap<String, PathBuf>>> = Arc::new(Mutex::new(HashMap::new()));
 
     let stdin = tokio::io::stdin();
     let mut lines = BufReader::new(stdin).lines();
@@ -112,9 +116,17 @@ pub async fn execute() -> Result<(), WorkerError> {
         };
 
         let runtime = Arc::clone(&runtime);
+        let wasm_cache = Arc::clone(&wasm_cache);
 
         tokio::spawn(async move {
-            let result = dispatch(request.file, request.args, request.mounts, runtime).await;
+            let result = dispatch(
+                request.file,
+                request.args,
+                request.mounts,
+                runtime,
+                wasm_cache,
+            )
+            .await;
 
             let response = WorkerResponse {
                 id: request.id,
@@ -141,6 +153,7 @@ async fn dispatch(
     args: Vec<String>,
     mounts: Vec<String>,
     runtime: Arc<Runtime>,
+    wasm_cache: Arc<Mutex<HashMap<String, PathBuf>>>,
 ) -> Result<String, String> {
     use std::ffi::OsStr;
 
@@ -151,23 +164,19 @@ async fn dispatch(
         .to_lowercase();
 
     match ext.as_str() {
-        "wasm" | "cwasm" => super::exec::execute_with_runtime(
-            Path::new(&file),
-            args,
-            mounts,
-            true,
-            false,
-            Some(runtime),
-        )
-        .await
-        .map_err(|e: ExecError| e.to_string()),
-        _ => super::run::execute_with_runtime(
+        "wasm" | "cwasm" => {
+            super::exec::execute(Path::new(&file), args, mounts, true, false, Some(runtime))
+                .await
+                .map_err(|e: ExecError| e.to_string())
+        }
+        _ => super::run::execute(
             Some(Path::new(&file)),
             args,
             mounts,
             true,
             false,
             Some(runtime),
+            Some(wasm_cache),
         )
         .await
         .map_err(|e: RunError| e.to_string()),

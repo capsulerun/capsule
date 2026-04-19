@@ -8,7 +8,7 @@ use capsule_core::wasm::commands::create::CreateInstance;
 use capsule_core::wasm::commands::run::RunInstance;
 use capsule_core::wasm::execution_policy::{Compute, ExecutionPolicy};
 use capsule_core::wasm::runtime::{Runtime, RuntimeConfig, WasmRuntimeError};
-use capsule_core::wasm::utilities::task_reporter::TaskReporter;
+use capsule_core::wasm::utilities::task_reporter::{LogLevel, TaskReporter};
 
 use crate::commands::shared::load_env_variables;
 
@@ -50,16 +50,6 @@ pub async fn execute(
     mounts: Vec<String>,
     json: bool,
     verbose: bool,
-) -> Result<String, ExecError> {
-    execute_with_runtime(wasm_path, args, mounts, json, verbose, None).await
-}
-
-pub async fn execute_with_runtime(
-    wasm_path: &Path,
-    args: Vec<String>,
-    mounts: Vec<String>,
-    json: bool,
-    verbose: bool,
     shared_runtime: Option<Arc<Runtime>>,
 ) -> Result<String, ExecError> {
     let ext = wasm_path.extension().and_then(|e| e.to_str()).unwrap_or("");
@@ -78,7 +68,15 @@ pub async fn execute_with_runtime(
         )));
     }
 
-    let mut reporter = TaskReporter::new(!json);
+    let log_level = if json {
+        LogLevel::Silent
+    } else if verbose {
+        LogLevel::Verbose
+    } else {
+        LogLevel::Normal
+    };
+
+    let mut reporter = TaskReporter::new(log_level.clone());
 
     let wasm_path_abs = wasm_path
         .canonicalize()
@@ -102,11 +100,16 @@ pub async fn execute_with_runtime(
         Some(r) => r,
         None => {
             reporter.start_progress("Initializing runtime");
+
             let capsule_toml = Manifest::new().map(|m| m.capsule_toml).unwrap_or_default();
-            let runtime_config = RuntimeConfig { cache_dir, verbose };
-            let r = Runtime::new(runtime_config, capsule_toml)?;
+            let runtime_config = RuntimeConfig {
+                cache_dir,
+                log_level,
+            };
+            let runtime = Runtime::new(runtime_config, capsule_toml)?;
+
             reporter.finish_progress(Some("Runtime ready"));
-            r
+            runtime
         }
     };
 

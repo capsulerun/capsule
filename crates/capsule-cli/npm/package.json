@@ -1,6 +1,6 @@
 {
   "name": "@capsule-run/cli",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "description": "Secure WASM runtime to isolate and manage AI agent tasks",
   "bin": {
     "capsule": "./bin/capsule.js"
@@ -29,9 +29,9 @@
     "node": ">=18"
   },
   "optionalDependencies": {
-    "@capsule-run/cli-darwin-arm64": "0.8.8",
-    "@capsule-run/cli-darwin-x64": "0.8.8",
-    "@capsule-run/cli-linux-x64": "0.8.8",
-    "@capsule-run/cli-win32-x64": "0.8.8"
+    "@capsule-run/cli-darwin-arm64": "0.8.9",
+    "@capsule-run/cli-darwin-x64": "0.8.9",
+    "@capsule-run/cli-linux-x64": "0.8.9",
+    "@capsule-run/cli-win32-x64": "0.8.9"
   }
 }

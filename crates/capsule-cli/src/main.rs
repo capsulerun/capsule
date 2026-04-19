@@ -62,7 +62,7 @@ async fn main() -> Result<(), CliError> {
                 None => args,
             };
             let file_path = file.as_deref().map(Path::new);
-            let result = run::execute(file_path, args, mount, json, verbose).await?;
+            let result = run::execute(file_path, args, mount, json, verbose, None, None).await?;
 
             if json {
                 println!("{}", result);
@@ -93,7 +93,7 @@ async fn main() -> Result<(), CliError> {
                 Some(ref path) => load_args_file(path).map_err(CliError::ExecError)?,
                 None => args,
             };
-            let result = exec::execute(Path::new(&file), args, mount, json, verbose).await?;
+            let result = exec::execute(Path::new(&file), args, mount, json, verbose, None).await?;
 
             if json {
                 println!("{}", result);
