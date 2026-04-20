@@ -1,6 +1,6 @@
 <div align="center">
 
-# ```Capsule```
+# `Capsule`
 
 **A secure, durable runtime for AI agents**
 
