@@ -3,12 +3,13 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark-mode.png" />
   <source media="(prefers-color-scheme: light)" srcset="assets/logo-light-mode.png" />
-  <img alt="Capsule" src="assets/logo-light-mode.png" width="120" />
+  <img alt="Capsule" src="assets/logo-light-mode.png" width="100" />
 </picture>
 
 # `Capsule`
 
-[![CI](https://img.shields.io/github/actions/workflow/status/capsulerun/capsule/ci.yml?branch=main) ![Release](https://img.shields.io/github/v/release/capsulerun/capsule)](https://github.com/capsulerun/capsule/releases) [![NPM Downloads](https://img.shields.io/npm/dm/%40capsule-run%252Fcli)](https://www.npmjs.com/package/@capsule-run/cli)
+[![CI](https://img.shields.io/github/actions/workflow/status/capsulerun/capsule/ci.yml?branch=main&label=CI)](https://github.com/capsulerun/capsule/actions/workflows/ci.yml) [![NPM Downloads](https://img.shields.io/npm/dm/@capsule-run%2Fcli?label=npm&color=orange)](https://www.npmjs.com/package/@capsule-run/cli) [![PyPI Downloads](https://img.shields.io/pypi/dm/capsule-run?label=PyPI&color=3775A9)](https://pypistats.org/packages/capsule-run)
+
 
 [Getting Started](#getting-started) • [Documentation](#documentation) • [Issues](https://github.com/capsulerun/capsule/issues/new) • [Contributing](#contributing)
 
