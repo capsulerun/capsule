@@ -8,7 +8,7 @@
 
 # `Capsule`
 
-[![CI](https://github.com/mavdol/capsule/actions/workflows/ci.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/ci.yml)
+[![CI](https://github.com/capsulerun/capsule/actions/workflows/ci.yml/badge.svg)](https://github.com/capsulerun/capsule/actions/workflows/ci.yml)
 
 [Getting Started](#getting-started) • [Documentation](#documentation) • [Issues](https://github.com/capsulerun/capsule/issues/new) • [Contributing](#contributing)
 
@@ -24,8 +24,6 @@
 - **Resource limits**: Set CPU, memory, and timeout limits per task
 - **Automatic retries**: Handle failures without manual intervention
 - **Lifecycle tracking**: Monitor which tasks are running, completed, or failed
-
-This enables safe task-level execution of untrusted code.
 
 ## How It Works
 
@@ -60,15 +58,6 @@ export const analyzeData = task({
   // Your code runs safely in a Wasm sandbox
   return { processed: dataset.length, status: "complete" };
 });
-
-// The "main" task is required as the entrypoint
-export const main = task({
-    name: "main",
-    compute: "HIGH"
-}, () => {
-  return analyzeData([1, 2, 3, 4, 5]);
-});
-
 ```
 
 > [!NOTE]
@@ -193,7 +182,7 @@ export const main = task({
 ```
 
 > [!TIP]
-> If you're looking for a pre-configured, ready-to-use solution, check out the [Python adapter](https://github.com/mavdol/capsule/tree/main/integrations/python-adapter) or [TypeScript adapter](https://github.com/mavdol/capsule/tree/main/integrations/typescript-adapter).
+> If you're looking for a pre-configured, ready-to-use solution, check out the [Python adapter](https://github.com/capsulerun/capsule/tree/main/integrations/python-adapter) or [TypeScript adapter](https://github.com/capsulerun/capsule/tree/main/integrations/typescript-adapter).
 
 ## Documentation
 
@@ -522,7 +511,7 @@ Contributions are welcome!
 **Prerequisites:** Rust (latest stable), Python 3.13+, Node.js 22+
 
 ```bash
-git clone https://github.com/mavdol/capsule.git
+git clone https://github.com/capsulerun/capsule.git
 cd capsule
 
 # Build and install CLI
@@ -545,7 +534,7 @@ npm install && npm run build && npm link
 3. **Run tests**: `cargo test` (only needed if modifying `crates/capsule-cli` or `crates/capsule-core`)
 4. **Open** a Pull Request
 
-Need help? [Open an issue](https://github.com/mavdol/capsule/issues)
+Need help? [Open an issue](https://github.com/capsulerun/capsule/issues)
 
 ## Credits
 

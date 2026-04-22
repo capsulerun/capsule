@@ -11,9 +11,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mavdol/capsule.git"
+    "url": "https://github.com/capsulerun/capsule.git"
   },
-  "homepage": "https://github.com/mavdol/capsule",
+  "homepage": "https://github.com/capsulerun/capsule",
   "scripts": {
     "build:ts": "tsc",
     "build:wasm:py": "capsule build src/python_sandbox.py --export && mv src/python_sandbox.wasm dist/sandboxes/python_sandbox.wasm",

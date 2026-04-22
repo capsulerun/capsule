@@ -1,8 +1,8 @@
 # `Capsule` MCP Server
 
-[![MCP Server Release](https://github.com/mavdol/capsule/actions/workflows/mcp-integration-release.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/mcp-integration-release.yml)
+[![MCP Server Release](https://github.com/capsulerun/capsule/actions/workflows/mcp-integration-release.yml/badge.svg)](https://github.com/capsulerun/capsule/actions/workflows/mcp-integration-release.yml)
 
-Give your AI agent the ability to write and run Python and JavaScript code, in a secure sandbox.
+Give your agent the ability to write and run Python and JavaScript code, in a secure sandbox.
 
 Every execution happens inside its own WebAssembly sandbox with strict resource limits. No file system access, no risk to your host system.
 
@@ -15,7 +15,7 @@ Every execution happens inside its own WebAssembly sandbox with strict resource 
 
 ### Example
 
-Ask your AI agent:
+Ask your agent:
 
 > *"I have monthly revenue of [12400, 15800, 14200, 18900, 21000, 19500]. What's the average and which month grew the most?"*
 
@@ -56,7 +56,7 @@ The server ships two pre-compiled WebAssembly modules: one for Python, one for J
 - **CPU/Ram limits** — fuel-metered execution prevents runaway loops
 - **No host access** — no filesystem or network unless explicitly allowed
 
-Learn more about [Capsule](https://github.com/mavdol/capsule).
+Learn more about [Capsule](https://github.com/capsulerun/capsule).
 
 ## Limitations
 

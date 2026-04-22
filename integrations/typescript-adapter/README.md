@@ -1,6 +1,6 @@
 # `Capsule` TypeScript Adapter
 
-[![TypeScript Adapter Release](https://github.com/mavdol/capsule/actions/workflows/typescript-adapter-release.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/typescript-adapter-release.yml)
+[![TypeScript Adapter Release](https://github.com/capsulerun/capsule/actions/workflows/typescript-adapter-release.yml/badge.svg)](https://github.com/capsulerun/capsule/actions/workflows/typescript-adapter-release.yml)
 
 Execute Python and JavaScript code securely inside Capsule sandboxes from your TypeScript/JavaScript applications.
 
@@ -146,4 +146,4 @@ const result = await s.run("x"); // throws
 
 The adapter compiles Python and JavaScript sandboxes into WebAssembly modules during the build step. When you call `runPython()` or `runJavaScript()`, the adapter invokes these pre-built sandboxes using Capsule's runner with the code you provide.
 
-Learn more about [Capsule](https://github.com/mavdol/capsule).
+Learn more about [Capsule](https://github.com/capsulerun/capsule).

@@ -1,19 +1,13 @@
-# capsule
-
-**A secure, durable runtime for agentic workflows**
+# `capsule`
 
 ## Overview
 
-Capsule is a runtime for coordinating AI agent tasks in isolated environments. It is designed to handle untrusted code execution, long-running workflows, large-scale processing, or even multi-agent systems.
-
-Each task runs inside its own WebAssembly sandbox, providing:
+```Capsule``` is a runtime for executing untrusted code in isolated environments. Each task runs inside its own WebAssembly sandbox, providing:
 
 - **Isolated execution**: Each task runs isolated from your host system
 - **Resource limits**: Set CPU, memory, and timeout limits per task
 - **Automatic retries**: Handle failures without manual intervention
 - **Lifecycle tracking**: Monitor which tasks are running, completed, or failed
-
-This enables safe task-level execution of untrusted code within AI agent systems.
 
 ## Installation
 
@@ -194,7 +188,7 @@ Create a `capsule.toml` file in your project root to set default options:
 
 ```toml
 [workflow]
-name = "My AI Workflow"
+name = "My Workflow"
 version = "1.0.0"
 entrypoint = "src/main.ts"  # Run `capsule run` without specifying a file
 
@@ -282,5 +276,5 @@ export const main = task({
 
 ## Links
 
-- [GitHub](https://github.com/mavdol/capsule)
-- [Issues](https://github.com/mavdol/capsule/issues)
+- [GitHub](https://github.com/capsulerun/capsule)
+- [Issues](https://github.com/capsulerun/capsule/issues)

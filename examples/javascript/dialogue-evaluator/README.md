@@ -1,6 +1,6 @@
 # Dialogue Evaluator
 
-GitHub Repository: https://github.com/mavdol/capsule
+GitHub Repository: https://github.com/capsulerun/capsule
 
 This example demonstrates how to build a multi-task workflow in that processes data, interacts with an external LLM, and manages file I/O.
 We're creating many tiny agents that evaluate video game dialogue emotions and save them in a CSV.

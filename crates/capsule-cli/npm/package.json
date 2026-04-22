@@ -19,9 +19,9 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mavdol/capsule.git"
+    "url": "https://github.com/capsulerun/capsule.git"
   },
-  "homepage": "https://github.com/mavdol/capsule",
+  "homepage": "https://github.com/capsulerun/capsule",
   "publishConfig": {
     "access": "public"
   },

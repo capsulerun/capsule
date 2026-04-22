@@ -1,6 +1,6 @@
 # `Capsule` Python Adapter
 
-[![Python Adapter Release](https://github.com/mavdol/capsule/actions/workflows/python-adapter-release.yml/badge.svg)](https://github.com/mavdol/capsule/actions/workflows/python-adapter-release.yml)
+[![Python Adapter Release](https://github.com/capsulerun/capsule/actions/workflows/python-adapter-release.yml/badge.svg)](https://github.com/capsulerun/capsule/actions/workflows/python-adapter-release.yml)
 
 Execute Python and JavaScript code securely inside Capsule sandboxes from your Python applications.
 
@@ -138,4 +138,4 @@ async with Session() as s:
 
 The adapter compiles Python and JavaScript sandboxes into WebAssembly modules during the build step. When you call `run_python()` or `run_javascript()`, the adapter invokes these pre-built sandboxes using Capsule's runner with the code you provide.
 
-Learn more about [Capsule](https://github.com/mavdol/capsule).
+Learn more about [Capsule](https://github.com/capsulerun/capsule).

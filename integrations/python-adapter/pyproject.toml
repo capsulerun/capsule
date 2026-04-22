@@ -27,8 +27,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mavdol/capsule"
-Repository = "https://github.com/mavdol/capsule/tree/main/integrations/python-adapter"
+Homepage = "https://github.com/capsulerun/capsule"
+Repository = "https://github.com/capsulerun/capsule/tree/main/integrations/python-adapter"
 
 [project.optional-dependencies]
 test = [

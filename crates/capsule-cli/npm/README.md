@@ -282,5 +282,5 @@ export const main = task({
 
 ## Links
 
-- [GitHub](https://github.com/mavdol/capsule)
-- [Issues](https://github.com/mavdol/capsule/issues)
+- [GitHub](https://github.com/capsulerun/capsule)
+- [Issues](https://github.com/capsulerun/capsule/issues)
