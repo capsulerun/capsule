@@ -8,7 +8,8 @@
 
 # `Capsule`
 
-[![CI](https://img.shields.io/github/actions/workflow/status/capsulerun/capsule/ci.yml?branch=main&label=CI)](https://github.com/capsulerun/capsule/actions/workflows/ci.yml) [![NPM Downloads](https://img.shields.io/npm/dm/@capsule-run%2Fcli?label=npm&color=orange)](https://www.npmjs.com/package/@capsule-run/cli) [![PyPI Downloads](https://img.shields.io/pypi/dm/capsule-run?label=PyPI&color=3775A9)](https://pypistats.org/packages/capsule-run)
+[![CI](https://img.shields.io/github/actions/workflow/status/capsulerun/capsule/ci.yml?branch=main&label=CI)](https://github.com/capsulerun/capsule/actions/workflows/ci.yml) [![NPM Downloads](https://img.shields.io/npm/dm/@capsule-run%2Fcli?label=npm&color=orange)](https://www.npmjs.com/package/@capsule-run/cli) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/capsule-run?period=monthly&units=ABBREVIATION&left_color=grey&right_color=blue&right_text=ee&left_text=downloads/month(PyPI))](https://pypi.org/project/capsule-run)
+
 
 
 [Getting Started](#getting-started) • [Documentation](#documentation) • [Issues](https://github.com/capsulerun/capsule/issues/new) • [Contributing](#contributing)
