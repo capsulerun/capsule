@@ -3,7 +3,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark-mode.png" />
   <source media="(prefers-color-scheme: light)" srcset="assets/logo-light-mode.png" />
-  <img alt="Capsule" src="assets/logo-light-mode.png" width="100" />
+  <img alt="Capsule" src="assets/logo-light-mode.png" width="80" />
 </picture>
 
 # `Capsule`
