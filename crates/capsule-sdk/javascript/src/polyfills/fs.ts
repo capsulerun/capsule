@@ -48,6 +48,8 @@ interface Descriptor {
         openFlags: { create?: boolean; directory?: boolean; exclusive?: boolean; truncate?: boolean },
         descriptorFlags: { read?: boolean; write?: boolean; mutateDirectory?: boolean }
     ): Descriptor;
+    readlinkAt(path: string): string;
+    symlinkAt(oldPath: string, newPath: string): void;
 }
 
 interface PreopenedDir {
@@ -857,6 +859,81 @@ export async function unlink(path: string): Promise<void> {
 }
 
 /**
+ * Read the target of a symlink synchronously.
+ */
+export function readlinkSync(path: string): string {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+    try {
+        if (typeof resolved.dir.readlinkAt !== 'function') {
+            throw Object.assign(
+                new Error(`ENOSYS: function not implemented, readlink '${path}'`),
+                { code: 'ENOSYS' }
+            );
+        }
+        return resolved.dir.readlinkAt(resolved.relativePath);
+    } catch (e) {
+        if (e instanceof Error && (e as any).code) throw e;
+        throw Object.assign(
+            new Error(`EINVAL: invalid argument, readlink '${path}'`),
+            { code: 'EINVAL' }
+        );
+    }
+}
+
+/**
+ * Read the target of a symlink asynchronously (callback style).
+ */
+export function readlink(
+    path: string,
+    callback: (err: Error | null, linkString?: string) => void
+): void {
+    Promise.resolve()
+        .then(() => readlinkSync(path))
+        .then((target) => callback(null, target))
+        .catch((err) => callback(err instanceof Error ? err : new Error(String(err))));
+}
+
+/**
+ * Create a symbolic link synchronously.
+ * target: the link destination (relative to the sandbox — cannot escape it).
+ * path:   the new symlink path.
+ */
+export function symlinkSync(target: string, path: string): void {
+    const resolved = resolvePath(path);
+    if (!resolved) throw enoent(path);
+    try {
+        if (typeof resolved.dir.symlinkAt !== 'function') {
+            throw Object.assign(
+                new Error(`ENOSYS: function not implemented, symlink '${target}' -> '${path}'`),
+                { code: 'ENOSYS' }
+            );
+        }
+        resolved.dir.symlinkAt(target, resolved.relativePath);
+    } catch (e) {
+        if (e instanceof Error && (e as any).code) throw e;
+        throw Object.assign(
+            new Error(`ENOSYS: function not implemented, symlink '${target}' -> '${path}'`),
+            { code: 'ENOSYS' }
+        );
+    }
+}
+
+/**
+ * Create a symbolic link asynchronously (callback style).
+ */
+export function symlink(
+    target: string,
+    path: string,
+    callback: (err: Error | null) => void
+): void {
+    Promise.resolve()
+        .then(() => symlinkSync(target, path))
+        .then(() => callback(null))
+        .catch((err) => callback(err instanceof Error ? err : new Error(String(err))));
+}
+
+/**
  * Internal helper — returns the entry type for a path without building a full StatResult.
  */
 async function statPath(path: string): Promise<'file' | 'directory' | 'notfound'> {
@@ -1111,6 +1188,14 @@ export const promises = {
         }
     },
 
+    async readlink(path: string): Promise<string> {
+        return readlinkSync(path);
+    },
+
+    async symlink(target: string, path: string): Promise<void> {
+        symlinkSync(target, path);
+    },
+
     async appendFile(path: string, data: string | Uint8Array): Promise<void> {
         appendFileSync(path, data);
     },
@@ -1154,12 +1239,15 @@ export const constants = {
 };
 
 const fs = {
+    // Async / callback
     readFile,
     writeFile,
     appendFile,
     readdir,
     stat,
     lstat,
+    readlink,
+    symlink,
     unlink,
     rmdir,
     rm,
@@ -1173,6 +1261,8 @@ const fs = {
     readdirSync,
     statSync,
     lstatSync,
+    readlinkSync,
+    symlinkSync,
     mkdirSync,
     rmdirSync,
     rmSync,
