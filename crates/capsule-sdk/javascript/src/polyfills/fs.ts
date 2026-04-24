@@ -286,14 +286,39 @@ type Encoding = 'utf8' | 'utf-8' | 'buffer' | null | undefined;
 
 interface ReadFileOptions {
     encoding?: Encoding;
+    flag?: string;
 }
 
 interface WriteFileOptions {
     encoding?: Encoding;
+    flag?: string;
+    mode?: number;
+}
+
+interface ReaddirOptions {
+    encoding?: Encoding;
+    withFileTypes?: boolean;
+    recursive?: boolean;
+}
+
+export class Dirent {
+    name: string;
+    private _type: string;
+    constructor(name: string, type: string) {
+        this.name = name;
+        this._type = type;
+    }
+    isFile()            { return this._type === 'regular-file'; }
+    isDirectory()       { return this._type === 'directory'; }
+    isSymbolicLink()    { return this._type === 'symbolic-link'; }
+    isFIFO()            { return this._type === 'fifo'; }
+    isBlockDevice()     { return this._type === 'block-device'; }
+    isCharacterDevice() { return this._type === 'character-device'; }
+    isSocket()          { return this._type === 'socket'; }
 }
 
 /**
- * Read file contents (async/callback style)
+ * Read file contents
  */
 export function readFile(
     path: string,
@@ -324,7 +349,7 @@ export function readFile(
 }
 
 /**
- * Write file contents (async/callback style)
+ * Write file contents
  */
 export function writeFile(
     path: string,
@@ -345,17 +370,67 @@ export function writeFile(
 }
 
 /**
- * Read directory contents (async/callback style)
+ * Read directory contents
  */
 export function readdir(
     path: string,
-    optionsOrCallback: any | ((err: Error | null, files?: string[]) => void),
-    callback?: (err: Error | null, files?: string[]) => void
+    optionsOrCallback: ReaddirOptions | ((err: Error | null, files?: string[] | Dirent[]) => void),
+    callback?: (err: Error | null, files?: string[] | Dirent[]) => void
 ): void {
+    const options: ReaddirOptions = typeof optionsOrCallback === 'function' ? {} : (optionsOrCallback as ReaddirOptions) ?? {};
     const cb = typeof optionsOrCallback === 'function' ? optionsOrCallback : callback;
 
-    list(path)
-        .then((files) => cb?.(null, files))
+    if (options.withFileTypes) {
+        listWithTypes(path)
+            .then((entries) => cb?.(null, entries))
+            .catch((err) => cb?.(err instanceof Error ? err : new Error(String(err))));
+    } else {
+        list(path)
+            .then((files) => cb?.(null, files))
+            .catch((err) => cb?.(err instanceof Error ? err : new Error(String(err))));
+    }
+}
+
+/**
+ * stat callback
+ */
+export function stat(
+    path: string,
+    callback: (err: Error | null, stats?: StatResult) => void
+): void {
+    Promise.resolve()
+        .then(() => statSync(path))
+        .then((s) => callback(null, s))
+        .catch((err) => callback(err instanceof Error ? err : new Error(String(err))));
+}
+
+/**
+ * lstat callback
+ */
+export function lstat(
+    path: string,
+    callback: (err: Error | null, stats?: StatResult) => void
+): void {
+    Promise.resolve()
+        .then(() => lstatSync(path))
+        .then((s) => callback(null, s))
+        .catch((err) => callback(err instanceof Error ? err : new Error(String(err))));
+}
+
+/**
+ * appendFile callback
+ */
+export function appendFile(
+    path: string,
+    data: string | Uint8Array,
+    optionsOrCallback: WriteFileOptions | Encoding | ((err: Error | null) => void),
+    callback?: (err: Error | null) => void
+): void {
+    const cb: ((err: Error | null) => void) | undefined =
+        typeof optionsOrCallback === 'function' ? optionsOrCallback : callback;
+    Promise.resolve()
+        .then(() => appendFileSync(path, data))
+        .then(() => cb?.(null))
         .catch((err) => cb?.(err instanceof Error ? err : new Error(String(err))));
 }
 
@@ -435,7 +510,33 @@ export function appendFileSync(path: string, data: string | Uint8Array, _options
 /**
  * Read directory contents synchronously.
  */
-export function readdirSync(path: string, _options?: any): string[] {
+async function listWithTypes(path: string): Promise<Dirent[]> {
+    const resolved = resolvePath(path);
+    if (!resolved) throw Object.assign(new Error(`ENOENT: no such file or directory, scandir '${path}'`), { code: 'ENOENT' });
+
+    try {
+        let targetDir = resolved.dir;
+        if (resolved.relativePath !== '.') {
+            targetDir = resolved.dir.openAt(
+                { symlinkFollow: false },
+                resolved.relativePath,
+                { directory: true },
+                { read: true }
+            );
+        }
+        const stream = targetDir.readDirectory();
+        const entries: Dirent[] = [];
+        let entry: DirectoryEntry | null | undefined;
+        while ((entry = stream.readDirectoryEntry()) && entry) {
+            if (entry.name) entries.push(new Dirent(entry.name, entry.type ?? 'unknown'));
+        }
+        return entries;
+    } catch {
+        throw Object.assign(new Error(`ENOENT: no such file or directory, scandir '${path}'`), { code: 'ENOENT' });
+    }
+}
+
+export function readdirSync(path: string, options?: ReaddirOptions): string[] | Dirent[] {
     const resolved = resolvePath(path);
     if (!resolved) throw enoent(path);
 
@@ -450,13 +551,19 @@ export function readdirSync(path: string, _options?: any): string[] {
             );
         }
         const stream = targetDir.readDirectory();
-        const entries: string[] = [];
-        let entry;
+        const names: string[] = [];
+        const dirents: Dirent[] = [];
+        let entry: DirectoryEntry | null | undefined;
         while ((entry = stream.readDirectoryEntry()) && entry) {
-            if (entry.name) entries.push(entry.name);
+            if (!entry.name) continue;
+            if (options?.withFileTypes) {
+                dirents.push(new Dirent(entry.name, entry.type ?? 'unknown'));
+            } else {
+                names.push(entry.name);
+            }
         }
-        return entries;
-    } catch (e) {
+        return options?.withFileTypes ? dirents : names;
+    } catch {
         throw Object.assign(new Error(`ENOENT: no such file or directory, scandir '${path}'`), { code: 'ENOENT' });
     }
 }
@@ -465,11 +572,30 @@ export interface StatResult {
     isFile: () => boolean;
     isDirectory: () => boolean;
     isSymbolicLink: () => boolean;
-    size: number;
-    mtimeMs: number;
-    atimeMs: number;
-    ctimeMs: number;
+    isFIFO: () => boolean;
+    isBlockDevice: () => boolean;
+    isCharacterDevice: () => boolean;
+    isSocket: () => boolean;
+    dev: number;
+    ino: number;
     mode: number;
+    nlink: number;
+    uid: number;
+    gid: number;
+    rdev: number;
+    size: number;
+    blksize: number;
+    blocks: number;
+    // timestamp (ms)
+    atimeMs: number;
+    mtimeMs: number;
+    ctimeMs: number;
+    birthtimeMs: number;
+    // timestamp (Date) — used by glob, fast-glob, chokidar etc.
+    atime: Date;
+    mtime: Date;
+    ctime: Date;
+    birthtime: Date;
 }
 
 function datetimeToMs(dt: WasiDatetime | null | undefined): number {
@@ -478,17 +604,32 @@ function datetimeToMs(dt: WasiDatetime | null | undefined): number {
 }
 
 function makeStatResult(s: DescriptorStat): StatResult {
-    const isDir = s.type === 'directory';
-    const isSym = s.type === 'symbolic-link';
+    const isDir  = s.type === 'directory';
+    const isSym  = s.type === 'symbolic-link';
+    const isFile = s.type === 'regular-file';
+    const mtimeMs = datetimeToMs(s.dataModificationTimestamp);
+    const atimeMs = datetimeToMs(s.dataAccessTimestamp);
+    const ctimeMs = datetimeToMs(s.statusChangeTimestamp);
+    const size    = Number(s.size);
     return {
-        isFile:         () => s.type === 'regular-file',
-        isDirectory:    () => isDir,
-        isSymbolicLink: () => isSym,
-        size:    Number(s.size),
-        mtimeMs: datetimeToMs(s.dataModificationTimestamp),
-        atimeMs: datetimeToMs(s.dataAccessTimestamp),
-        ctimeMs: datetimeToMs(s.statusChangeTimestamp),
+        isFile:            () => isFile,
+        isDirectory:       () => isDir,
+        isSymbolicLink:    () => isSym,
+        isFIFO:            () => s.type === 'fifo',
+        isBlockDevice:     () => s.type === 'block-device',
+        isCharacterDevice: () => s.type === 'character-device',
+        isSocket:          () => s.type === 'socket',
+        dev: 0, ino: 0, nlink: isDir ? 2 : 1,
+        uid: 0, gid: 0, rdev: 0,
+        size,
+        blksize: 4096,
+        blocks: Math.ceil(size / 512),
         mode: isDir ? 0o40755 : 0o100644,
+        atimeMs, mtimeMs, ctimeMs, birthtimeMs: mtimeMs,
+        atime:     new Date(atimeMs),
+        mtime:     new Date(mtimeMs),
+        ctime:     new Date(ctimeMs),
+        birthtime: new Date(mtimeMs),
     };
 }
 
@@ -917,8 +1058,8 @@ export const promises = {
         }
     },
 
-    async readdir(path: string): Promise<string[]> {
-        return list(path);
+    async readdir(path: string, options?: ReaddirOptions): Promise<string[] | Dirent[]> {
+        return options?.withFileTypes ? listWithTypes(path) : list(path);
     },
 
     async access(path: string): Promise<void> {
@@ -956,6 +1097,28 @@ export const promises = {
         }
     },
 
+    async lstat(path: string): Promise<StatResult> {
+        const resolved = resolvePath(path);
+        if (!resolved) throw Object.assign(new Error(`ENOENT: no such file or directory, lstat '${path}'`), { code: 'ENOENT' });
+        try {
+            if (typeof resolved.dir.statAt === 'function') {
+                return makeStatResult(resolved.dir.statAt({ symlinkFollow: false }, resolved.relativePath));
+            }
+            const fd = resolved.dir.openAt({ symlinkFollow: false }, resolved.relativePath, {}, { read: true });
+            return makeStatResult(fd.stat());
+        } catch {
+            throw Object.assign(new Error(`ENOENT: no such file or directory, lstat '${path}'`), { code: 'ENOENT' });
+        }
+    },
+
+    async appendFile(path: string, data: string | Uint8Array): Promise<void> {
+        appendFileSync(path, data);
+    },
+
+    async rename(oldPath: string, newPath: string): Promise<void> {
+        renameSync(oldPath, newPath);
+    },
+
     async rmdir(path: string, options?: RmdirOptions): Promise<void> {
         await rmdir(path, options);
     },
@@ -977,17 +1140,33 @@ export const promises = {
     },
 };
 
+export const constants = {
+    F_OK: 0,
+    R_OK: 4,
+    W_OK: 2,
+    X_OK: 1,
+    O_RDONLY: 0,
+    O_WRONLY: 1,
+    O_RDWR:   2,
+    O_CREAT:  64,
+    O_TRUNC:  512,
+    O_APPEND: 1024,
+};
+
 const fs = {
-    // Async / callback
     readFile,
     writeFile,
+    appendFile,
     readdir,
+    stat,
+    lstat,
     unlink,
     rmdir,
     rm,
     mkdir,
     copyFile,
     cp,
+    // Sync
     readFileSync,
     writeFileSync,
     appendFileSync,
@@ -1004,6 +1183,9 @@ const fs = {
     existsSync,
     // Promises API
     promises,
+    // Constants
+    constants,
+    Dirent,
 };
 
 export default fs;
