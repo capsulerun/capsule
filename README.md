@@ -8,9 +8,7 @@
 
 # `Capsule`
 
-[![CI](https://img.shields.io/github/actions/workflow/status/capsulerun/capsule/ci.yml?branch=main&label=CI)](https://github.com/capsulerun/capsule/actions/workflows/ci.yml) [![NPM Downloads](https://img.shields.io/npm/dm/@capsule-run%2Fcli?label=npm&color=orange&cacheSeconds=259200)](https://www.npmjs.com/package/@capsule-run/cli) 
-[![PyPI Downloads](https://img.shields.io/pypi/dm/capsule-run?label=PyPI&color=blue&cacheSeconds=1036800)](https://pypistats.org/packages/capsule-run)
-
+[![CI](https://img.shields.io/github/actions/workflow/status/capsulerun/capsule/ci.yml?branch=main&label=CI)](https://github.com/capsulerun/capsule/actions/workflows/ci.yml)
 
 
 [Getting Started](#getting-started) • [Documentation](#documentation) • [Issues](https://github.com/capsulerun/capsule/issues/new) • [Contributing](#contributing)
