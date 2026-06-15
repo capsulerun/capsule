@@ -531,13 +531,6 @@ npm install && npm run build && npm link
 
 Need help? [Open an issue](https://github.com/capsulerun/capsule/issues)
 
-## Ecosystem
-
-| Package | Description |
-|---------|-------------|
-| [`capsule`](https://github.com/capsulerun/capsule) | Core runtime (this repository) |
-| [`capsule-bash`](https://github.com/capsulerun/bash) | Sandboxed bash interface built from capsule |
-
 ## Credits
 
 Capsule builds on these open source projects:
