@@ -1,3 +1,13 @@
+> [!WARNING]
+> 
+> **DEPRECATED: Please use [vpod](https://github.com/capsulerun/vpod#python-sdk)  instead.**
+>
+> We are deprecating this Python adapter in favor of **vpod**. 
+> 
+> **Why?** This adapter relied on a limited POSIX emulation and required manual serialization to maintain session state between agent executions, which caused stability issues with complex code. 
+> 
+> `vpod` runs a Linux environment inside WebAssembly. This also provides a **real Python REPL** with native memory persistence, perfect session handling, and much stronger security isolation for untrusted code.
+
 # `Capsule` Python Adapter
 
 [![Python Adapter Release](https://github.com/capsulerun/capsule/actions/workflows/python-adapter-release.yml/badge.svg)](https://github.com/capsulerun/capsule/actions/workflows/python-adapter-release.yml)
